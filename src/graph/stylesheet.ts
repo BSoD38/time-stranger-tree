@@ -1,7 +1,7 @@
 import { ATTRIBUTE_COLORS, type GraphPalette } from '../theme/attribute';
 import { ATTRIBUTE_KEYS } from '../data/schema';
 
-// @types/cytoscape lags behind real style properties (underlay-*,
+// cytoscape's bundled types lag behind real style properties (underlay-*,
 // min-zoomed-font-size, line-dash-pattern...) — keep rules loosely typed and
 // cast once at cytoscape() init.
 interface StyleRule {

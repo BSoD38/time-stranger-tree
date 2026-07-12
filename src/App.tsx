@@ -130,7 +130,6 @@ export default function App() {
   const openRoute = useStore((s) => s.openRoute);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const graphSurfaceRef = useRef<HTMLDivElement>(null);
 
   // Layout mode is breakpoint-driven: docked ≥1024, drawer 640–1023, sheet <640.
   const overlay = useMediaQuery('(max-width: 1023px)');
@@ -160,18 +159,6 @@ export default function App() {
   }, [attempt]);
 
   useGlobalKeys();
-
-  // The Codex overlay paints over the graph + panel but leaves them mounted (so
-  // Cytoscape keeps its viewport). Mark that surface `inert` while the Codex is up
-  // so its controls drop out of the tab order and can't take keyboard focus behind
-  // the cover. Set imperatively because `inert` needs attribute presence, not a
-  // boolean value (React 18 has no typed prop for it).
-  useEffect(() => {
-    const el = graphSurfaceRef.current;
-    if (!el) return;
-    if (view === 'codex') el.setAttribute('inert', '');
-    else el.removeAttribute('inert');
-  }, [view]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -260,7 +247,9 @@ export default function App() {
       </header>
       {view === 'graph' && filtersOpen && <FilterBar />}
       <div className={styles.body}>
-        <div ref={graphSurfaceRef} className={styles.graphSurface} aria-hidden={view === 'codex'}>
+        {/* Kept mounted under the Codex so Cytoscape retains its viewport; `inert`
+            drops the covered surface out of the tab order and the a11y tree. */}
+        <div className={styles.graphSurface} inert={view === 'codex'}>
           <main className={styles.canvas}>
             <GraphCanvas />
             <Celebration />
