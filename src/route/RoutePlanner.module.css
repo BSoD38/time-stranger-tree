@@ -174,3 +174,23 @@
   font-size: 10.5px;
   color: var(--text-dim);
 }
+
+/* Touch: comfortable targets for the route planner's endpoint pickers and pager. */
+@media (pointer: coarse) {
+  .endpointSearch input {
+    min-height: 40px;
+    font-size: 16px; /* stop iOS from zooming the field on focus */
+  }
+  .endpointValue,
+  .useSelected {
+    min-height: 40px;
+  }
+  .rank select {
+    min-height: 40px;
+  }
+  .pager button {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './App.module.css';
 import { initAppData } from './data/appData';
 import { loadDatabase, prefetchThumbnails } from './data/load';
@@ -18,6 +18,8 @@ import { useChromaticAccent } from './theme/useChromaticAccent';
 import { BrandMark } from './ui/BrandMark';
 import { SegButton } from './ui/SegButton';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { useMediaQuery } from './ui/useMediaQuery';
+import { useSheetDrag } from './ui/useSheetDrag';
 
 function useGlobalKeys() {
   useEffect(() => {
@@ -52,6 +54,65 @@ function Splash({ children }: { children: React.ReactNode }) {
   );
 }
 
+type PanelMode = 'dock' | 'drawer' | 'sheet';
+
+/**
+ * Hosts the detail / route / empty panel. On desktop the panel is docked in the
+ * flex row and displaces the graph (master–detail). Below 1024px the graph stays
+ * full-bleed and the panel floats over it: a right-hand drawer on tablets, a
+ * bottom sheet on phones. The same panel components render in every mode — only
+ * the container and its dismiss affordances change.
+ */
+function PanelHost({
+  mode,
+  open,
+  onClose,
+  children,
+}: {
+  mode: PanelMode;
+  open: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  // Retain the last content so the slide-out animation isn't blank while the
+  // store has already cleared the selection.
+  const [content, setContent] = useState<React.ReactNode>(children);
+  useEffect(() => {
+    if (open) setContent(children);
+  }, [open, children]);
+  // Clear any drag-applied inline transform when (re)opening so the CSS
+  // open-state class can slide the sheet back into view.
+  useEffect(() => {
+    if (open && hostRef.current) {
+      hostRef.current.style.transform = '';
+      hostRef.current.style.transition = '';
+    }
+  }, [open]);
+
+  const drag = useSheetDrag(hostRef, { enabled: mode === 'sheet', onClose });
+
+  // Docked: the panel is a normal flex child; no overlay chrome.
+  if (mode === 'dock') return <>{children}</>;
+
+  return (
+    <div
+      ref={hostRef}
+      className={styles.panelHost}
+      data-mode={mode}
+      data-open={open}
+      aria-hidden={!open}
+    >
+      {mode === 'sheet' && (
+        <button type="button" className={styles.grip} aria-label="Close panel" {...drag}>
+          <span className={styles.gripBar} />
+        </button>
+      )}
+      {content}
+    </div>
+  );
+}
+
 export default function App() {
   const ready = useStore((s) => s.ready);
   const selected = useStore((s) => s.selected);
@@ -62,6 +123,11 @@ export default function App() {
   const openRoute = useStore((s) => s.openRoute);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Layout mode is breakpoint-driven: docked ≥1024, drawer 640–1023, sheet <640.
+  const overlay = useMediaQuery('(max-width: 1023px)');
+  const compact = useMediaQuery('(max-width: 639px)');
+  const panelMode: PanelMode = !overlay ? 'dock' : compact ? 'sheet' : 'drawer';
 
   useChromaticAccent();
 
@@ -89,6 +155,13 @@ export default function App() {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
+  // Dismiss whatever the overlay panel is currently showing.
+  const closePanel = useCallback(() => {
+    const store = useStore.getState();
+    if (store.routeOpen) exitRoute();
+    else store.select(null);
+  }, []);
+
   if (error) {
     return (
       <Splash>
@@ -111,6 +184,16 @@ export default function App() {
     );
   }
 
+  // The idle "welcome" panel only earns its keep as a docked column; when the
+  // graph is full-bleed it stays out of the way until the user picks something.
+  const panelContent = routeOpen ? (
+    <RoutePlanner />
+  ) : selected ? (
+    <DetailPanel slug={selected} />
+  ) : panelMode === 'dock' ? (
+    <EmptyPanel />
+  ) : null;
+
   return (
     <div className={styles.shell}>
       <header className={styles.topbar}>
@@ -122,8 +205,10 @@ export default function App() {
             Time Stranger <span className={styles.titleAccent}>Tree</span>
           </h1>
         </div>
-        <SearchBox />
-        <div className={styles.topActions}>
+        <div className={styles.search}>
+          <SearchBox />
+        </div>
+        <div className={styles.viewActions}>
           <SegButton active={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>
             Filters
           </SegButton>
@@ -132,9 +217,12 @@ export default function App() {
           </SegButton>
           {focus && (
             <SegButton active onClick={exitFocus} title="Exit focus (Esc)">
-              ◈ Focused — exit
+              ◈ <span className={styles.focusFull}>Focused — exit</span>
+              <span className={styles.focusShort}>Exit</span>
             </SegButton>
           )}
+        </div>
+        <div className={styles.sysActions}>
           <SettingsMenu />
           <ThemeToggle />
         </div>
@@ -157,7 +245,9 @@ export default function App() {
             ))}
           </div>
         </main>
-        {routeOpen ? <RoutePlanner /> : selected ? <DetailPanel slug={selected} /> : <EmptyPanel />}
+        <PanelHost mode={panelMode} open={routeOpen || Boolean(selected)} onClose={closePanel}>
+          {panelContent}
+        </PanelHost>
       </div>
     </div>
   );

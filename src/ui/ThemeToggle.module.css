@@ -21,3 +21,10 @@
   font-size: 15px;
   line-height: 1;
 }
+
+@media (pointer: coarse) {
+  .btn {
+    width: 44px;
+    height: 44px;
+  }
+}

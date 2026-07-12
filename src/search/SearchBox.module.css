@@ -1,6 +1,6 @@
 .wrap {
   position: relative;
-  width: 280px;
+  width: 100%; /* the parent .search cell owns the width per breakpoint */
 }
 
 .input {
@@ -13,6 +13,14 @@
   font-family: var(--font-body);
   font-size: 13px;
   outline: none;
+}
+
+/* Touch: a comfortable tap/type target, and ≥16px text so iOS doesn't zoom in. */
+@media (pointer: coarse) {
+  .input {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
 
 .input:focus {

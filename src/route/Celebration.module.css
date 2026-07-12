@@ -76,6 +76,15 @@
   }
 }
 
+/* On phones the route panel is a bottom sheet — surface the toast up top where
+   it clears the sheet instead of hiding behind it. */
+@media (max-width: 639px) {
+  .toast {
+    bottom: auto;
+    top: max(64px, calc(env(safe-area-inset-top) + 60px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glow {
     display: none;

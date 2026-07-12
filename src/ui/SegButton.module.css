@@ -30,3 +30,19 @@
   padding: 5px 12px;
   font-size: 12px;
 }
+
+/* Touch: guarantee a 44px tap target while keeping the compact desktop look. */
+@media (pointer: coarse) {
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+  }
+  .sm {
+    padding-inline: 14px;
+  }
+  .md {
+    padding-inline: 16px;
+  }
+}

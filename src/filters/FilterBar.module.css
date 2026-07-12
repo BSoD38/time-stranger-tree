@@ -46,6 +46,19 @@
   color: var(--text);
 }
 
+/* Touch: roomier filter chips (dense set, so a touch-friendly 36px rather than a
+   full 44 — still far larger than the 22px desktop chip). */
+@media (pointer: coarse) {
+  .chip,
+  .chipActive {
+    min-height: 36px;
+    padding: 7px 14px;
+  }
+  .clear {
+    min-height: 36px;
+  }
+}
+
 .chipActive {
   border-color: color-mix(in oklab, var(--chip-color) 62%, var(--border));
   background: color-mix(in oklab, var(--chip-color) 16%, transparent);

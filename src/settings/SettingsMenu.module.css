@@ -112,6 +112,20 @@
   box-shadow: inset 0 0 0 1px var(--accent-line);
 }
 
+@media (pointer: coarse) {
+  .trigger {
+    width: 44px;
+    height: 44px;
+  }
+  .pop {
+    width: min(272px, calc(100vw - 24px));
+  }
+  .segBtn,
+  .segActive {
+    min-height: 40px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pop {
     animation: none;

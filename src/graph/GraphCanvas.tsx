@@ -36,6 +36,20 @@ export function GraphCanvas() {
     resetView(cy, orientation);
     registerCy(cy);
 
+    // Keep the renderer in sync with container-size changes the window 'resize'
+    // event doesn't cover: device rotation, the desktop↔overlay breakpoint (the
+    // side panel docking / undocking), and the filter bar opening. Coalesced to
+    // one resize per frame.
+    let resizePending = 0;
+    const resizeObserver = new ResizeObserver(() => {
+      if (resizePending) return;
+      resizePending = requestAnimationFrame(() => {
+        resizePending = 0;
+        cy.resize();
+      });
+    });
+    resizeObserver.observe(ref.current!);
+
     let lastTap = { id: '', time: 0 };
     cy.on('tap', 'node', (event) => {
       const id = event.target.id() as string;
@@ -53,6 +67,8 @@ export function GraphCanvas() {
     });
 
     return () => {
+      resizeObserver.disconnect();
+      if (resizePending) cancelAnimationFrame(resizePending);
       unregisterCy();
       cy.destroy();
     };
