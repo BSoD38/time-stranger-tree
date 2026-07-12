@@ -1,4 +1,4 @@
-import type { EvolutionCondition } from '../../data/schema';
+import type { EvolutionCondition, Personality } from '../../data/schema';
 import { useStore } from '../../state/store';
 import { Chip } from '../../ui/Chip';
 import { MonRow } from '../../ui/MonRow';
@@ -6,10 +6,11 @@ import styles from './ConditionCard.module.css';
 
 interface ConditionCardProps {
   condition: EvolutionCondition;
+  basePersonality: Personality;
 }
 
 /** "How to obtain" — the requirements to evolve INTO the shown Digimon. */
-export function ConditionCard({ condition }: ConditionCardProps) {
+export function ConditionCard({ condition, basePersonality }: ConditionCardProps) {
   const select = useStore((s) => s.select);
 
   return (
@@ -50,8 +51,16 @@ export function ConditionCard({ condition }: ConditionCardProps) {
           ))}
         </div>
       )}
+      <div className={styles.persona}>
+        <span className={`label ${styles.personaLabel}`}>Base personality</span>
+        <Chip color="var(--accent)" title="Match this on the source Digimon to ease the requirements">
+          {basePersonality}
+        </Chip>
+      </div>
       <div className={styles.caption}>
-        Requirements to evolve into this Digimon (from any pre-evolution).
+        Requirements to evolve into this Digimon (from any pre-evolution). When the source Digimon
+        shares this base personality and has the matching Agent Skills, the stat requirements are
+        reduced — rank and Agent Skill thresholds are unchanged.
       </div>
     </div>
   );

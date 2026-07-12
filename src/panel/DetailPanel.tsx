@@ -78,7 +78,10 @@ export function DetailPanel({ slug }: { slug: string }) {
           {digimon.description}
         </p>
 
-        <ConditionCard condition={digimon.evolutionCondition} />
+        <ConditionCard
+          condition={digimon.evolutionCondition}
+          basePersonality={digimon.basePersonality}
+        />
         <EvolutionLinks digimon={digimon} />
 
         <Collapse id="stats" title="Stats" defaultOpen>
@@ -98,9 +101,7 @@ export function DetailPanel({ slug }: { slug: string }) {
             <DialogueBlock lines={digimon.postEvolutionDialogue} name={digimon.name} />
           </Collapse>
         )}
-        <div className={styles.traits}>
-          Traits: {digimon.traits.join(', ') || '—'} · Base personality: {digimon.basePersonality}
-        </div>
+        <div className={styles.traits}>Traits: {digimon.traits.join(', ') || '—'}</div>
       </div>
     </Panel>
   );

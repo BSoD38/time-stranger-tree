@@ -32,6 +32,20 @@
   color: var(--jogress);
 }
 
+/* The personality-match discount: a modifier on the requirements above, not a
+   hard requirement itself, so it sits apart from the pills with its own label. */
+.persona {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* extends the global `.label` utility */
+.personaLabel {
+  color: var(--text-dim);
+}
+
 .caption {
   margin-top: 8px;
   font-size: 11px;
