@@ -2,6 +2,7 @@ import cytoscape from 'cytoscape';
 import { useEffect, useRef } from 'react';
 import { appData } from '../data/appData';
 import { useStore } from '../state/store';
+import { attachBandLayer } from './bandLayer';
 import { registerCy, unregisterCy } from './cyInstance';
 import { buildElements } from './elements';
 import { buildStylesheet } from './stylesheet';
@@ -37,6 +38,9 @@ export function GraphCanvas() {
     // fit-all sliver (orientation-aware — the long axis flips with it)
     resetView(cy, orientation);
     registerCy(cy);
+
+    // Alternating generation-stage shading behind the graph (full-graph view only).
+    const detachBandLayer = attachBandLayer(cy);
 
     // Repaint the viewport when the chrome theme flips. Element classes persist
     // across a stylesheet swap, so the appearance layers (selection, lineage,
@@ -89,6 +93,7 @@ export function GraphCanvas() {
     });
 
     return () => {
+      detachBandLayer();
       unsubscribeTheme();
       resizeObserver.disconnect();
       if (resizePending) cancelAnimationFrame(resizePending);

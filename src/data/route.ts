@@ -44,9 +44,13 @@ export function stepRequirement(g: EvolutionGraph, from: string, to: string): St
 }
 
 export interface CostTable {
-  devolve: number;           // one de-digivolve action, always legal
+  // One de-digivolve action. Treated as always path-legal here (no stat/rank
+  // gate). The real in-game precondition — the target already met, or the
+  // Digimon's personality matching the target's base — is player save-state we
+  // can't know, so it's surfaced per-step in the UI rather than modelled here.
+  devolve: number;
   evolve: number;            // one plain digivolve; slightly above devolve so
-                             //   condition-free descents win cost ties
+                             //   unconditional descents win cost ties
   itemSurcharge: number;     // added to evolve on item-gated steps
   jogressSurcharge: number;  // added to evolve on jogress steps
 }

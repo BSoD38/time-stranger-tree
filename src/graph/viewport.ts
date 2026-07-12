@@ -1,8 +1,14 @@
 import type { Core } from 'cytoscape';
 import { appData } from '../data/appData';
 import { lineage } from '../data/graph';
+import type { Route } from '../data/route';
 import { focusPos, minimizeBandCrossings } from './crossing';
 import { genAxis, genLabelPos, orient, spreadAxis, type Orientation } from './orient';
+
+/** Spread-axis pitch between consecutive steps in the compact route view. */
+const ROUTE_PITCH = 150;
+/** Generation-axis pitch between the generation levels a route visits. */
+const ROUTE_BAND_PITCH = 200;
 
 /**
  * Re-place every node for a new orientation without a rebuild. Digimon nodes
@@ -51,6 +57,39 @@ export function compactFocus(cy: Core, focusSlug: string, orientation: Orientati
       slugs.forEach((slug, i) => {
         cy.$id(slug).position(orient(focusPos(band, i, slugs.length), orientation));
       });
+    });
+  });
+}
+
+/**
+ * Compact an open route into a clean staircase. Like compactFocus, this exists
+ * because otherwise the route's members keep their scattered full-graph
+ * positions and the path reads as noise strung across the whole board.
+ *
+ * The nodes are sequenced along the spread axis in route order (evenly spaced),
+ * while the generation axis carries their generation LEVEL — the distinct
+ * generations the route visits, re-indexed to consecutive bands (collapsing the
+ * full graph's tier gaps, as compactFocus does). So a digivolve reads as a step
+ * up a band and a de-digivolve as a step down, consistent with the generation
+ * axis everywhere else. A route is a loopless path, so the spread coordinate
+ * increases monotonically and the glowing links never cross — no
+ * crossing-reduction pass is needed (unlike the branching focus lineage).
+ * Only the route's own nodes move; everything else is hidden in this mode.
+ */
+export function compactRoute(cy: Core, route: Route, orientation: Orientation): void {
+  const { positions } = appData().layout;
+  const nodes = [route.from, ...route.steps.map((s) => s.to)];
+  const genXs = [
+    ...new Set(nodes.map((s) => positions[s]?.x).filter((x): x is number => x !== undefined)),
+  ].sort((a, b) => a - b);
+  const levelOf = new Map(genXs.map((x, i): [number, number] => [x, i]));
+  const mid = (nodes.length - 1) / 2;
+  cy.batch(() => {
+    nodes.forEach((slug, i) => {
+      const base = positions[slug];
+      if (!base) return;
+      const gen = levelOf.get(base.x)! * ROUTE_BAND_PITCH;
+      cy.$id(slug).position(orient({ x: gen, y: (i - mid) * ROUTE_PITCH }, orientation));
     });
   });
 }

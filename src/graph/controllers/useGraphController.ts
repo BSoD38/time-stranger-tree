@@ -4,7 +4,7 @@ import { descendants, edgeKey, lineage } from '../../data/graph';
 import { filterSlugs, hasActiveCriteria } from '../../data/search';
 import { useStore, type AppState } from '../../state/store';
 import { getCy } from '../cyInstance';
-import { compactFocus, reorientGraph, resetView } from '../viewport';
+import { compactFocus, compactRoute, reorientGraph, resetView } from '../viewport';
 import type { Core } from 'cytoscape';
 
 const APPEARANCE_CLASSES =
@@ -186,11 +186,16 @@ function frameGraph(cy: Core, animate = true): void {
     return;
   }
 
-  reorientGraph(cy, o);
   if (route && route.steps.length) {
+    // Route mirrors focus: "hide others" compacts the path into a tight
+    // staircase, "dim others" leaves it in place within the full graph.
+    if (state.hideOthers) compactRoute(cy, route, o);
+    else reorientGraph(cy, o);
     fitEles(cy, new Set([route.from, ...route.steps.map((s) => s.to)]), 80, animate);
     return;
   }
+
+  reorientGraph(cy, o);
   const anchor = state.selected ? cy.$id(state.selected) : null;
   if (anchor?.length) {
     cy.animate({ zoom: { level: 0.6, position: anchor.position() }, duration: 350 });
@@ -265,9 +270,10 @@ export function useGraphController(): void {
     ];
     recompute(useStore.getState());
     manageRouteFlow();
-    // deep-linked focus is set before we subscribe — frame it once on mount
+    // a deep-linked focus or route is set before we subscribe — frame it once on mount
     const cy = getCy();
-    if (cy && useStore.getState().focus) frameGraph(cy, false);
+    const s0 = useStore.getState();
+    if (cy && (s0.focus || s0.routeOpen)) frameGraph(cy, false);
     return () => {
       unsubscribers.forEach((u) => u());
       if (flowRAF) {

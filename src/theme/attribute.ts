@@ -43,6 +43,8 @@ export interface GraphPalette {
   bond: string;
   colLabel: string; // giant ghosted generation watermark
   colLabelOpacity: number;
+  band: string; // alternating generation-stage shading (full-graph view)
+  bandOpacity: number;
 }
 
 export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
@@ -63,6 +65,8 @@ export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
     bond: '#45bcd6',
     colLabel: '#f0eeeb',
     colLabelOpacity: 0.42,
+    band: '#f0eeeb', // faint warm-white wash lifts the shaded stages off the near-black
+    bandOpacity: 0.065,
   },
   light: {
     bg: '#ece7dd', // warm parchment — matches --graph-bg (light)
@@ -81,6 +85,8 @@ export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
     bond: '#1c86a3',
     colLabel: '#a89e8f', // warm-grey watermark
     colLabelOpacity: 0.62,
+    band: '#4a4336', // warm graphite wash darkens the shaded stages on parchment
+    bandOpacity: 0.09,
   },
 };
 
