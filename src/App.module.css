@@ -54,6 +54,16 @@
   min-width: 0;
 }
 
+/* Top-level Tree ⇄ Codex switch — sits just right of the wordmark. */
+.viewSwitch {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* The graph actions (Filters / Route / Focus) own the auto-margin, so they and the
+   sysActions cluster pin together at the right edge — a single gap opens after the
+   search, not one on each side (which would leave these floating mid-bar). */
 .viewActions {
   display: flex;
   align-items: center;
@@ -65,6 +75,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Codex hides the graph actions, so sysActions takes over pushing to the right. */
+.topbar[data-view='codex'] .sysActions {
+  margin-left: auto;
 }
 
 /* The focus toggle shortens from "Focused — exit" to "Exit" when space is tight. */
@@ -85,6 +100,22 @@
   min-width: 0;
   /* the "Digital World" viewport — night in dark, parchment in light (--graph-bg) */
   background: var(--graph-bg);
+}
+
+/* Groups the graph + panel so the Codex overlay can mark the whole surface inert
+   in one place. display:contents keeps them direct flex children of .body (the
+   master–detail dock layout and the drawer/sheet's positioning are unchanged). */
+.graphSurface {
+  display: contents;
+}
+
+/* Codex covers the graph + panel rather than unmounting them, so Cytoscape keeps
+   its viewport (pan/zoom, selection) while you browse the table and return. */
+.codexLayer {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-view);
+  background: var(--bg);
 }
 
 /* =============================================================================
@@ -236,6 +267,11 @@
   .search {
     flex: 0 1 240px;
   }
+  /* Below desktop the mark + the Tree/Codex switch carry the identity; drop the
+     wordmark so the switch and search keep room. */
+  .title {
+    display: none;
+  }
   /* the drawer floats over a full-bleed graph, so shorten the focus label */
   .focusFull {
     display: none;
@@ -246,32 +282,34 @@
 }
 
 @media (max-width: 639px) {
+  /* Phones: wrap into rows — [mark · switch · sys], then search, then the graph
+     actions. In Codex only the first row renders (no search / graph actions), so
+     unrendered rows never leave phantom gaps the way a fixed grid would. */
   .topbar {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-areas:
-      'brand search sys'
-      'view  view   view';
-    gap: 8px 10px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 10px;
     min-height: auto;
     padding-top: max(8px, env(safe-area-inset-top));
     padding-bottom: 8px;
   }
   .brand {
-    grid-area: brand;
+    order: 0;
   }
-  .title {
-    display: none; /* mark carries the identity; the name is in the tab + splash */
-  }
-  .search {
-    grid-area: search;
-    flex: none;
+  .viewSwitch {
+    order: 1;
   }
   .sysActions {
-    grid-area: sys;
+    order: 2;
+    margin-left: auto; /* pin the settings/theme cluster to the right of row 1 */
+  }
+  .search {
+    order: 3;
+    flex: 1 1 100%;
   }
   .viewActions {
-    grid-area: view;
+    order: 4;
+    flex: 1 1 100%;
     margin-left: 0;
     flex-wrap: wrap;
     justify-content: flex-end; /* hug the right edge rather than float mid-row */

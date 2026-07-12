@@ -1,6 +1,6 @@
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
 import { appData } from '../data/appData';
-import { thumbUrl } from '../data/load';
+import { Sprite } from './Sprite';
 import styles from './MonRow.module.css';
 
 interface MonRowProps {
@@ -69,7 +69,7 @@ export function MonRow({
       onMouseEnter={onMouseEnter}
       onMouseDown={onMouseDown}
     >
-      <img src={thumbUrl(slug)} alt="" width={size} height={size} loading="lazy" />
+      <Sprite slug={slug} size={size} />
       {sub != null ? (
         <span className={styles.body}>
           <span className={styles.name}>{label}</span>

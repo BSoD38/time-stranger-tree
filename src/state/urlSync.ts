@@ -2,6 +2,7 @@ import { appData } from '../data/appData';
 import { useStore } from './store';
 
 // Hand-rolled hash sync (no router):
+//   #/codex               Codex table view     (pushState — browser Back returns to the Tree)
 //   #/d/{slug}            selection            (replaceState — no history spam)
 //   #/f/{slug}            focus mode           (pushState — browser Back exits)
 //   #/route/{from}/{to}   route planner        (pushState)
@@ -15,19 +16,26 @@ function applyHash(): void {
     const focusMatch = location.hash.match(/^#\/f\/([a-z0-9-]+)$/);
     const detailMatch = location.hash.match(/^#\/d\/([a-z0-9-]+)$/);
     const routeMatch = location.hash.match(/^#\/route\/([a-z0-9-]+)\/([a-z0-9-]+)$/);
+    const codexMatch = /^#\/codex\/?$/.test(location.hash);
 
     if (focusMatch && exists(focusMatch[1])) {
+      store.setView('graph');
       store.closeRoute();
       store.select(focusMatch[1]);
       store.setFocus(focusMatch[1]);
     } else if (routeMatch && exists(routeMatch[1]) && exists(routeMatch[2])) {
+      store.setView('graph');
       store.setFocus(null);
       store.openRoute({ from: routeMatch[1], to: routeMatch[2] });
     } else if (detailMatch && exists(detailMatch[1])) {
+      store.setView('graph');
       store.closeRoute();
       store.setFocus(null);
       store.select(detailMatch[1]);
+    } else if (codexMatch) {
+      store.setView('codex'); // clears focus / route (see store.setView)
     } else {
+      store.setView('graph');
       store.setFocus(null);
       store.closeRoute();
     }
@@ -60,32 +68,39 @@ export function initUrlSync(): void {
 
   useStore.subscribe(
     (s) => ({
+      view: s.view,
       selected: s.selected,
       focus: s.focus,
       routeOpen: s.routeOpen,
       routeFrom: s.route.from,
       routeTo: s.route.to,
     }),
-    ({ selected, focus, routeOpen, routeFrom, routeTo }) => {
+    ({ view, selected, focus, routeOpen, routeFrom, routeTo }) => {
       if (applying) return;
       const target = focus
         ? `#/f/${focus}`
         : routeOpen && routeFrom && routeTo
           ? `#/route/${routeFrom}/${routeTo}`
-          : selected
-            ? `#/d/${selected}`
-            : '';
+          : view === 'codex'
+            ? '#/codex'
+            : selected
+              ? `#/d/${selected}`
+              : '';
       if (location.hash === target) return;
 
       const url = target || location.pathname + location.search;
+      // Focus, Route and Codex are full mode changes worth a history entry, so
+      // browser Back leaves them; selection just replaces (no history spam).
       const entering =
         (focus && !location.hash.startsWith('#/f/')) ||
-        (routeOpen && routeFrom && routeTo && !location.hash.startsWith('#/route/'));
+        (routeOpen && routeFrom && routeTo && !location.hash.startsWith('#/route/')) ||
+        (view === 'codex' && location.hash !== '#/codex');
       if (entering) history.pushState(null, '', url);
       else history.replaceState(null, '', url);
     },
     {
       equalityFn: (a, b) =>
+        a.view === b.view &&
         a.selected === b.selected &&
         a.focus === b.focus &&
         a.routeOpen === b.routeOpen &&

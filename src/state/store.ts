@@ -3,8 +3,9 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { appData } from '../data/appData';
 import type { Orientation } from '../graph/orient';
 import { findRoutes, type Route } from '../data/route';
-import type { Attribute, Generation } from '../data/schema';
+import type { Attribute, Generation, StatLevel } from '../data/schema';
 import type { SpecialFacet } from '../data/search';
+import type { SortKey as CodexSortKey } from '../codex/codexRows';
 
 // Display preferences persist across sessions (localStorage). Orientation
 // defaults to rows — the many-members-per-stage spread reads best sideways;
@@ -58,8 +59,32 @@ const emptyRoute: RouteState = {
   activeStep: null,
 };
 
+/** Codex table controls, held here (not in the component) so sort / filters /
+ *  level survive switching to the Tree and back — the Codex unmounts each time. */
+export interface CodexState {
+  query: string;
+  generations: ReadonlySet<Generation>;
+  attributes: ReadonlySet<Attribute>;
+  level: StatLevel;
+  sortKey: CodexSortKey;
+  sortDir: 'asc' | 'desc';
+}
+
+const emptyCodex: CodexState = {
+  query: '',
+  generations: new Set(),
+  attributes: new Set(),
+  level: 'lv99',
+  sortKey: 'number',
+  sortDir: 'asc',
+};
+
+/** Top-level surface: the evolution graph, or the flat Codex table. */
+export type AppView = 'graph' | 'codex';
+
 export interface AppState {
   ready: boolean;
+  view: AppView;
   selected: string | null;
   focus: string | null;
   generations: ReadonlySet<Generation>;
@@ -72,8 +97,13 @@ export interface AppState {
   /** Isolate mode: hide (vs dim) everything outside the focused lineage / route. */
   hideOthers: boolean;
   settingsOpen: boolean;
+  codex: CodexState;
 
   setReady(): void;
+  patchCodex(patch: Partial<CodexState>): void;
+  setView(view: AppView): void;
+  /** Codex → Tree: select a Digimon, isolate its lineage, and show the graph. */
+  enterTreeFocused(slug: string): void;
   select(slug: string | null): void;
   setFocus(slug: string | null): void;
   setOrientation(value: Orientation): void;
@@ -92,7 +122,8 @@ export interface AppState {
   setActiveStep(index: number | null): void;
 }
 
-function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
+/** Immutable set toggle: returns a new set with `value` added or removed. */
+export function toggled<T>(set: ReadonlySet<T>, value: T): Set<T> {
   const next = new Set(set);
   if (next.has(value)) next.delete(value);
   else next.add(value);
@@ -111,6 +142,7 @@ function computeRoutes(route: RouteState): RouteState {
 export const useStore = create<AppState>()(
   subscribeWithSelector((set, get) => ({
     ready: false,
+    view: 'graph',
     selected: null,
     focus: null,
     generations: new Set<Generation>(),
@@ -121,8 +153,16 @@ export const useStore = create<AppState>()(
     routeOpen: false,
     ...loadPrefs(),
     settingsOpen: false,
+    codex: emptyCodex,
 
     setReady: () => set({ ready: true }),
+    patchCodex: (patch) => set({ codex: { ...get().codex, ...patch } }),
+    // Codex is a graph-independent surface: entering it leaves the isolating
+    // graph modes (focus / route) so the URL and the visible view never disagree.
+    // `selected` is preserved so returning to the Tree lands where you left it.
+    setView: (view) => set(view === 'codex' ? { view, focus: null, routeOpen: false } : { view }),
+    enterTreeFocused: (slug) =>
+      set({ view: 'graph', selected: slug, focus: slug, routeOpen: false }),
     select: (slug) => set({ selected: slug }),
     // Focus and the route planner are mutually exclusive views (as the URL model
     // already assumes): a route can devolve out of a lineage, which can't be shown

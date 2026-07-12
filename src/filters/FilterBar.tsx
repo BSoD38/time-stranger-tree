@@ -3,6 +3,7 @@ import { ATTRIBUTE_KEYS, GENERATION_KEYS } from '../data/schema';
 import { filterSlugs, hasActiveCriteria, type SpecialFacet } from '../data/search';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
+import { FilterChip, FilterChipGroup } from '../ui/FilterChip';
 import styles from './FilterBar.module.css';
 
 const SPECIAL: Array<{ key: SpecialFacet; label: string; title: string }> = [
@@ -27,47 +28,41 @@ export function FilterBar() {
 
   return (
     <div className={styles.bar}>
-      <div className={styles.group}>
-        <span className={`label ${styles.groupLabel}`}>Gen</span>
+      <FilterChipGroup label="Gen">
         {GENERATION_KEYS.map((generation) => (
-          <button
+          <FilterChip
             key={generation}
-            className={generations.has(generation) ? styles.chipActive : styles.chip}
-            aria-pressed={generations.has(generation)}
+            active={generations.has(generation)}
             onClick={() => toggleGeneration(generation)}
           >
             {generation}
-          </button>
+          </FilterChip>
         ))}
-      </div>
-      <div className={styles.group}>
-        <span className={`label ${styles.groupLabel}`}>Attribute</span>
+      </FilterChipGroup>
+      <FilterChipGroup label="Attribute">
         {ATTRIBUTE_KEYS.map((attribute) => (
-          <button
+          <FilterChip
             key={attribute}
-            className={attributes.has(attribute) ? styles.chipActive : styles.chip}
-            style={{ '--chip-color': ATTRIBUTE_COLORS[attribute] } as React.CSSProperties}
-            aria-pressed={attributes.has(attribute)}
+            active={attributes.has(attribute)}
+            color={ATTRIBUTE_COLORS[attribute]}
             onClick={() => toggleAttribute(attribute)}
           >
             {attribute}
-          </button>
+          </FilterChip>
         ))}
-      </div>
-      <div className={styles.group}>
-        <span className={`label ${styles.groupLabel}`}>Trait</span>
+      </FilterChipGroup>
+      <FilterChipGroup label="Trait">
         {SPECIAL.map(({ key, label, title }) => (
-          <button
+          <FilterChip
             key={key}
-            className={special.has(key) ? styles.chipActive : styles.chip}
+            active={special.has(key)}
             title={title}
-            aria-pressed={special.has(key)}
             onClick={() => toggleSpecial(key)}
           >
             {label}
-          </button>
+          </FilterChip>
         ))}
-      </div>
+      </FilterChipGroup>
       <div className={styles.tail}>
         <span className={styles.count}>
           {count} / 475

@@ -10,6 +10,7 @@ import { EmptyPanel } from './panel/EmptyPanel';
 import { RoutePlanner } from './route/RoutePlanner';
 import { SearchBox } from './search/SearchBox';
 import { SettingsMenu } from './settings/SettingsMenu';
+import { CodexPage } from './codex/CodexPage';
 import { useStore } from './state/store';
 import { exitFocus, exitRoute, initUrlSync } from './state/urlSync';
 import { ATTRIBUTE_COLORS, injectThemeVars } from './theme/attribute';
@@ -18,6 +19,7 @@ import { useChromaticAccent } from './theme/useChromaticAccent';
 import { BrandMark } from './ui/BrandMark';
 import { SegButton } from './ui/SegButton';
 import { ThemeToggle } from './ui/ThemeToggle';
+import { ViewSwitch } from './ui/ViewSwitch';
 import { useMediaQuery } from './ui/useMediaQuery';
 import { useSheetDrag } from './ui/useSheetDrag';
 
@@ -27,6 +29,9 @@ function useGlobalKeys() {
       const target = event.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
       const store = useStore.getState();
+      // Focus / Escape act on the graph; the Codex is a separate surface with no
+      // lineage focus or route to drive, so its keys are left alone there.
+      if (store.view !== 'graph') return;
       if (event.key === 'Escape') {
         if (store.focus) exitFocus();
         else if (store.routeOpen) exitRoute();
@@ -115,6 +120,8 @@ function PanelHost({
 
 export default function App() {
   const ready = useStore((s) => s.ready);
+  const view = useStore((s) => s.view);
+  const setView = useStore((s) => s.setView);
   const selected = useStore((s) => s.selected);
   const routeOpen = useStore((s) => s.routeOpen);
   const focus = useStore((s) => s.focus);
@@ -123,6 +130,7 @@ export default function App() {
   const openRoute = useStore((s) => s.openRoute);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
+  const graphSurfaceRef = useRef<HTMLDivElement>(null);
 
   // Layout mode is breakpoint-driven: docked ≥1024, drawer 640–1023, sheet <640.
   const overlay = useMediaQuery('(max-width: 1023px)');
@@ -152,6 +160,18 @@ export default function App() {
   }, [attempt]);
 
   useGlobalKeys();
+
+  // The Codex overlay paints over the graph + panel but leaves them mounted (so
+  // Cytoscape keeps its viewport). Mark that surface `inert` while the Codex is up
+  // so its controls drop out of the tab order and can't take keyboard focus behind
+  // the cover. Set imperatively because `inert` needs attribute presence, not a
+  // boolean value (React 18 has no typed prop for it).
+  useEffect(() => {
+    const el = graphSurfaceRef.current;
+    if (!el) return;
+    if (view === 'codex') el.setAttribute('inert', '');
+    else el.removeAttribute('inert');
+  }, [view]);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
@@ -198,7 +218,7 @@ export default function App() {
 
   return (
     <div className={styles.shell}>
-      <header className={styles.topbar}>
+      <header className={styles.topbar} data-view={view}>
         <div className={styles.brand}>
           <span className={styles.mark}>
             <BrandMark size={22} />
@@ -207,49 +227,65 @@ export default function App() {
             Time Stranger <span className={styles.titleAccent}>Tree</span>
           </h1>
         </div>
-        <div className={styles.search}>
-          <SearchBox />
+        <div className={styles.viewSwitch}>
+          <ViewSwitch value={view} onChange={setView} />
         </div>
-        <div className={styles.viewActions}>
-          <SegButton active={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>
-            Filters
-          </SegButton>
-          <SegButton active={routeOpen} onClick={() => (routeOpen ? exitRoute() : openRoute())}>
-            Route
-          </SegButton>
-          {focus && (
-            <SegButton active onClick={exitFocus} title="Exit focus (Esc)">
-              ◈ <span className={styles.focusFull}>Focused — exit</span>
-              <span className={styles.focusShort}>Exit</span>
-            </SegButton>
-          )}
-        </div>
+        {view === 'graph' && (
+          <>
+            <div className={styles.search}>
+              <SearchBox />
+            </div>
+            <div className={styles.viewActions}>
+              <SegButton active={filtersOpen} onClick={() => setFiltersOpen(!filtersOpen)}>
+                Filters
+              </SegButton>
+              <SegButton active={routeOpen} onClick={() => (routeOpen ? exitRoute() : openRoute())}>
+                Route
+              </SegButton>
+              {focus && (
+                <SegButton active onClick={exitFocus} title="Exit focus (Esc)">
+                  ◈ <span className={styles.focusFull}>Focused — exit</span>
+                  <span className={styles.focusShort}>Exit</span>
+                </SegButton>
+              )}
+            </div>
+          </>
+        )}
         <div className={styles.sysActions}>
-          <SettingsMenu />
+          {/* Settings only carries graph controls (layout, focus/route behaviour),
+              so it hides on the Codex alongside the other graph-only chrome. */}
+          {view === 'graph' && <SettingsMenu />}
           <ThemeToggle />
         </div>
       </header>
-      {filtersOpen && <FilterBar />}
+      {view === 'graph' && filtersOpen && <FilterBar />}
       <div className={styles.body}>
-        <main className={styles.canvas}>
-          <GraphCanvas />
-          <Celebration />
-          <div className={styles.legend}>
-            <span className={styles.legendTitle}>Attribute</span>
-            {ATTRIBUTE_KEYS.map((attribute) => (
-              <span key={attribute} className={styles.legendItem}>
-                <span
-                  className={styles.legendDot}
-                  style={{ background: ATTRIBUTE_COLORS[attribute] }}
-                />
-                {attribute}
-              </span>
-            ))}
+        <div ref={graphSurfaceRef} className={styles.graphSurface} aria-hidden={view === 'codex'}>
+          <main className={styles.canvas}>
+            <GraphCanvas />
+            <Celebration />
+            <div className={styles.legend}>
+              <span className={styles.legendTitle}>Attribute</span>
+              {ATTRIBUTE_KEYS.map((attribute) => (
+                <span key={attribute} className={styles.legendItem}>
+                  <span
+                    className={styles.legendDot}
+                    style={{ background: ATTRIBUTE_COLORS[attribute] }}
+                  />
+                  {attribute}
+                </span>
+              ))}
+            </div>
+          </main>
+          <PanelHost mode={panelMode} open={routeOpen || Boolean(selected)} onClose={closePanel}>
+            {panelContent}
+          </PanelHost>
+        </div>
+        {view === 'codex' && (
+          <div className={styles.codexLayer}>
+            <CodexPage />
           </div>
-        </main>
-        <PanelHost mode={panelMode} open={routeOpen || Boolean(selected)} onClose={closePanel}>
-          {panelContent}
-        </PanelHost>
+        )}
       </div>
     </div>
   );

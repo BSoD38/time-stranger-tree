@@ -12,6 +12,9 @@ export type StatKey = 'HP' | 'SP' | 'ATK' | 'DEF' | 'INT' | 'SPI' | 'SPD';
 
 export const STAT_KEYS: readonly StatKey[] = ['HP', 'SP', 'ATK', 'DEF', 'INT', 'SPI', 'SPD'];
 
+/** Which end of a stat's range to read — level 1 or the level-99 cap. */
+export type StatLevel = 'lv1' | 'lv99';
+
 export type Element =
   | 'Fire' | 'Water' | 'Plant' | 'Ice' | 'Electricity' | 'Earth'
   | 'Steel' | 'Wind' | 'Light' | 'Dark' | 'Null';

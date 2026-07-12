@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { appData } from '../data/appData';
 import { search } from '../data/search';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
 import { MonRow } from '../ui/MonRow';
+import { useSearchHotkey } from './useSearchHotkey';
 import { useSearchNav } from './useSearchNav';
 import styles from './SearchBox.module.css';
 
@@ -16,19 +17,7 @@ export function SearchBox() {
 
   const hits = open && query ? search(appData().searchIndex, query) : [];
 
-  // global shortcuts: '/' or Ctrl+K focus the search box
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const typing = (event.target as HTMLElement)?.tagName === 'INPUT';
-      if ((event.key === '/' && !typing) || (event.key === 'k' && event.ctrlKey)) {
-        event.preventDefault();
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  useSearchHotkey(inputRef);
 
   const pick = (slug: string, alsoFocus: boolean) => {
     select(slug);

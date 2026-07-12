@@ -29,11 +29,6 @@
   transform: translateX(2px);
 }
 
-.row img {
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-}
-
 /* stacked name + sub-line (used when `sub` is provided) */
 .body {
   display: flex;

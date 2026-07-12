@@ -1,0 +1,4 @@
+.sprite {
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+}

@@ -32,6 +32,10 @@ automatically.
   (stats, items, Jogress partners), de-digivolve steps included; up to 3
   alternative routes. Deep-linkable: `#/d/{slug}`, `#/f/{slug}`,
   `#/route/{from}/{to}`.
+- **Codex** (Tree/Codex switch, top-left): a sortable table of all 475 Digimon
+  with dex number, generation, attribute and the seven stats + total (Lv.1/Lv.99).
+  Filter by name/number, generation or attribute; click any row to jump into the
+  Tree focused on that lineage. Deep-linkable: `#/codex`.
 - **☾/☀** toggles the light/dark chrome theme (the graph viewport stays dark in both).
 
 ## Architecture notes
