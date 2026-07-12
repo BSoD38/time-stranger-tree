@@ -2,7 +2,6 @@ import type { EvolutionCondition } from '../../data/schema';
 import { useStore } from '../../state/store';
 import { Chip } from '../../ui/Chip';
 import { MonRow } from '../../ui/MonRow';
-import { THEME } from '../../theme/attribute';
 import styles from './ConditionCard.module.css';
 
 interface ConditionCardProps {
@@ -25,12 +24,12 @@ export function ConditionCard({ condition }: ConditionCardProps) {
         ))}
         {condition.talent && <Chip>Talent ≥ {condition.talent.value}</Chip>}
         {condition.agentSkills?.map((skill) => (
-          <Chip key={skill.category} color={THEME.bond} title="Agent Skills requirement">
+          <Chip key={skill.category} color="var(--bond)" title="Agent Skills requirement">
             {skill.category} {skill.value}
           </Chip>
         ))}
         {condition.requiredItem && (
-          <Chip color={THEME.item} title="Required item">
+          <Chip color="var(--item)" title="Required item">
             ◆ {condition.requiredItem}
           </Chip>
         )}
@@ -44,7 +43,7 @@ export function ConditionCard({ condition }: ConditionCardProps) {
               slug={partner.slug}
               name={partner.name}
               meta={partner.personality}
-              borderColor={THEME.jogress}
+              borderColor="var(--jogress)"
               onClick={() => select(partner.slug)}
               title={`${partner.name} — must also be raised`}
             />

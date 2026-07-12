@@ -1,7 +1,6 @@
 import { appData } from '../data/appData';
 import type { RouteStep } from '../data/route';
 import { useStore } from '../state/store';
-import { THEME } from '../theme/attribute';
 import { Chip } from '../ui/Chip';
 import { MonRow } from '../ui/MonRow';
 import styles from './RouteStep.module.css';
@@ -46,12 +45,12 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
           ))}
           {requirement.talent !== undefined && <Chip>Talent ≥ {requirement.talent}</Chip>}
           {requirement.item && (
-            <Chip color={THEME.item}>◆ {requirement.item}</Chip>
+            <Chip color="var(--item)">◆ {requirement.item}</Chip>
           )}
           {requirement.partners?.map((partner) => (
             <Chip
               key={partner.slug}
-              color={THEME.jogress}
+              color="var(--jogress)"
               title="Must also be raised — not part of this route"
               onClick={() => select(partner.slug)}
             >
@@ -59,7 +58,7 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
             </Chip>
           ))}
           {requirement.agentSkills?.map((skill) => (
-            <Chip key={skill.category} color={THEME.bond}>
+            <Chip key={skill.category} color="var(--bond)">
               ❖ {skill.category} {skill.value}
             </Chip>
           ))}

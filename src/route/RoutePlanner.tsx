@@ -9,7 +9,6 @@ import { useSearchNav } from '../search/useSearchNav';
 import { Chip } from '../ui/Chip';
 import { MonRow } from '../ui/MonRow';
 import { Panel, CloseButton } from '../ui/Panel';
-import { THEME } from '../theme/attribute';
 import { RouteStepCard } from './RouteStep';
 import styles from './RoutePlanner.module.css';
 
@@ -175,17 +174,17 @@ export function RoutePlanner() {
                   ))}
                   {summary.maxTalent && <Chip>Talent ≥ {summary.maxTalent}</Chip>}
                   {summary.items.map((item) => (
-                    <Chip key={item} color={THEME.item}>
+                    <Chip key={item} color="var(--item)">
                       ◆ {item}
                     </Chip>
                   ))}
                   {summary.partners.map((partner) => (
-                    <Chip key={partner.slug} color={THEME.jogress}>
+                    <Chip key={partner.slug} color="var(--jogress)">
                       ⧉ {partner.name}
                     </Chip>
                   ))}
                   {summary.agentSkills.map((skill) => (
-                    <Chip key={skill.category} color={THEME.bond}>
+                    <Chip key={skill.category} color="var(--bond)">
                       ❖ {skill.category} {skill.value}
                     </Chip>
                   ))}

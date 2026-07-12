@@ -63,8 +63,11 @@ One humanist family (Hanken Grotesk) carries everything, hierarchy by weight.
 - **Themes** — `src/theme/theme.ts` toggles a `data-theme` attribute on `<html>`
   (persisted, system-default, anti-flash inline script in `index.html`).
   `tokens.css` overrides neutrals/accents on `[data-theme='light']`. The graph
-  canvas keeps a fixed dark `--graph-bg` viewport in **both** themes so sprites
-  and their glow always lead.
+  canvas is themed too — a near-black "night" viewport in dark, warm parchment
+  in light (`--graph-bg`) — with bright node cards so sprites and their glow
+  always lead. Cytoscape can't read CSS vars, so its two palettes live in
+  `GRAPH_PALETTES` (`attribute.ts`) and `GraphCanvas` re-applies them via
+  `cy.style()` on theme change; keep `--graph-bg` in step with the palette `bg`.
 - **Tokens** — `src/theme/tokens.css` (`:root`). OKLCH neutrals + accent ramp,
   `--radius-*`, `--z-*`, `--shadow-dropdown|panel`, `--transition|-fast`, and one
   global `:focus-visible` ring. Prefer a token over a literal value. Attribute

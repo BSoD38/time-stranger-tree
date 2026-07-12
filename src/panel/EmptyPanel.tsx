@@ -51,7 +51,7 @@ export function EmptyPanel() {
             stats, resistances, and full lineage — or plan a route between any two forms.
           </p>
           <button className={styles.surprise} onClick={surprise}>
-            ✦ Surprise me
+            <span className={styles.sparkle}>✦</span> Surprise me
           </button>
         </div>
 

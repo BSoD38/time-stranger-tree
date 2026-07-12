@@ -5,6 +5,29 @@
   padding: 16px 16px 8px;
   /* the panel top glows in the selected Digimon's own signature colour */
   background: linear-gradient(180deg, var(--accent-faint), transparent);
+  animation: sectionIn var(--dur-2) var(--ease-out-quint) both;
+}
+
+/* A light cascade as a new Digimon loads: header, actions, then body. The
+   surface behind stays opaque, so this reads as content settling in, not a
+   flash. Re-fires per selection because DetailPanel is keyed by slug. */
+.actions {
+  animation: sectionIn var(--dur-2) var(--ease-out-quint) 45ms both;
+}
+
+.scroll {
+  animation: sectionIn var(--dur-2) var(--ease-out-quint) 90ms both;
+}
+
+@keyframes sectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .icon {
@@ -12,6 +35,18 @@
   border-radius: var(--radius-lg);
   background: var(--surface-2);
   flex-shrink: 0;
+  animation: iconPop var(--dur-2) var(--ease-out-quint) both;
+}
+
+@keyframes iconPop {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .titleBlock {

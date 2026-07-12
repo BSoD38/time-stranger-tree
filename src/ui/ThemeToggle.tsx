@@ -12,7 +12,8 @@ export function ThemeToggle() {
       title={`Switch to ${next} theme`}
       aria-label={`Switch to ${next} theme`}
     >
-      <span className={styles.icon} aria-hidden="true">
+      {/* keyed by theme so the glyph spins in on each switch */}
+      <span key={theme} className={styles.icon} aria-hidden="true">
         {theme === 'dark' ? '☾' : '☀'}
       </span>
     </button>

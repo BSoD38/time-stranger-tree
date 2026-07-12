@@ -23,11 +23,30 @@
 }
 
 .arrow {
+  display: inline-block;
   color: var(--accent);
   font-size: 10px;
   width: 10px;
+  transition: transform var(--transition);
+}
+
+.arrowOpen {
+  transform: rotate(90deg);
 }
 
 .body {
   padding: 0 16px 14px;
+  /* the panel opens downward; content eases in from just under the header */
+  animation: collapseIn var(--dur-2) var(--ease-out-quint) both;
+}
+
+@keyframes collapseIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

@@ -7,12 +7,19 @@
   white-space: nowrap;
   transition:
     border-color var(--transition-fast),
-    color var(--transition-fast);
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--dur-press) var(--ease-out-quart);
 }
 
 .btn:hover {
   border-color: color-mix(in oklab, var(--accent) 55%, var(--border));
   color: var(--text);
+}
+
+/* tactile press — the whole toolbar shares this one feedback */
+.btn:active {
+  transform: scale(0.96);
 }
 
 .active {

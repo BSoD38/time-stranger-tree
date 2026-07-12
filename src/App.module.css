@@ -37,9 +37,10 @@
 }
 
 .title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-family: var(--font-brand);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
   white-space: nowrap;
 }
 
@@ -82,7 +83,7 @@
   flex: 1;
   position: relative;
   min-width: 0;
-  /* the fixed dark "Digital World" viewport — stays dark in both chrome themes */
+  /* the "Digital World" viewport — night in dark, parchment in light (--graph-bg) */
   background: var(--graph-bg);
 }
 
@@ -189,7 +190,7 @@
   flex-wrap: wrap;
   gap: 5px 12px;
   padding: 8px 11px;
-  background: oklch(0.145 0.008 66 / 0.82);
+  background: var(--legend-bg);
   backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -223,6 +224,9 @@
   height: 9px;
   border-radius: 3px;
   flex-shrink: 0;
+  /* a hairline ring so the lighter attribute hues (gold, green) still read
+     against the pale legend chip in the light theme */
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--text) 14%, transparent);
 }
 
 /* =============================================================================
@@ -308,14 +312,29 @@
 }
 
 .splashTitle {
+  font-family: var(--font-brand);
   font-size: clamp(1.75rem, 6vw, 2.75rem);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
+  /* eases in just after the mark starts its evolution sequence */
+  animation: splashRise var(--dur-3) var(--ease-out-quint) 260ms both;
 }
 
 .splashTitle span {
   color: var(--accent);
+  transition: color var(--transition);
+}
+
+@keyframes splashRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .loadingBar {

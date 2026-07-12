@@ -7,6 +7,8 @@ import { buildElements } from './elements';
 import { buildStylesheet } from './stylesheet';
 import { resetView } from './viewport';
 import { useGraphController } from './controllers/useGraphController';
+import { GRAPH_PALETTES } from '../theme/attribute';
+import { getTheme, subscribeTheme } from '../theme/theme';
 
 export function GraphCanvas() {
   const ref = useRef<HTMLDivElement>(null);
@@ -16,7 +18,7 @@ export function GraphCanvas() {
     const cy = cytoscape({
       container: ref.current!,
       elements: buildElements(appData(), orientation),
-      style: buildStylesheet() as never,
+      style: buildStylesheet(GRAPH_PALETTES[getTheme()]) as never,
       layout: { name: 'preset' },
       autoungrabify: true,
       autounselectify: true, // selection lives in the store, styled via .sel
@@ -35,6 +37,13 @@ export function GraphCanvas() {
     // fit-all sliver (orientation-aware — the long axis flips with it)
     resetView(cy, orientation);
     registerCy(cy);
+
+    // Repaint the viewport when the chrome theme flips. Element classes persist
+    // across a stylesheet swap, so the appearance layers (selection, lineage,
+    // route, dim) re-map to the new palette automatically — no recompute needed.
+    const unsubscribeTheme = subscribeTheme((theme) => {
+      cy.style(buildStylesheet(GRAPH_PALETTES[theme]) as never);
+    });
 
     // Keep the renderer in sync with container-size changes the window 'resize'
     // event doesn't cover: device rotation, the desktop↔overlay breakpoint (the
@@ -66,7 +75,21 @@ export function GraphCanvas() {
       if (event.target === cy) useStore.getState().select(null);
     });
 
+    // Hover: a signature-hue sheen + pointer cursor on real Digimon nodes (not
+    // the generation watermark labels). One node at a time — negligible cost.
+    const container = ref.current!;
+    cy.on('mouseover', 'node', (event) => {
+      if (event.target.hasClass('col-label')) return;
+      event.target.addClass('hover');
+      container.style.cursor = 'pointer';
+    });
+    cy.on('mouseout', 'node', (event) => {
+      event.target.removeClass('hover');
+      container.style.cursor = '';
+    });
+
     return () => {
+      unsubscribeTheme();
       resizeObserver.disconnect();
       if (resizePending) cancelAnimationFrame(resizePending);
       unregisterCy();

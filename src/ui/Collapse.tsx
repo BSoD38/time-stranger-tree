@@ -25,7 +25,7 @@ export function Collapse({ id, title, defaultOpen = false, children }: CollapseP
   return (
     <section className={styles.section}>
       <button className={styles.header} onClick={toggle} aria-expanded={open}>
-        <span className={styles.arrow}>{open ? '▾' : '▸'}</span>
+        <span className={`${styles.arrow} ${open ? styles.arrowOpen : ''}`}>▸</span>
         {title}
       </button>
       {open && <div className={styles.body}>{children}</div>}

@@ -1,4 +1,4 @@
-import { ATTRIBUTE_COLORS, THEME } from '../theme/attribute';
+import { ATTRIBUTE_COLORS, type GraphPalette } from '../theme/attribute';
 import { ATTRIBUTE_KEYS } from '../data/schema';
 
 // @types/cytoscape lags behind real style properties (underlay-*,
@@ -20,7 +20,7 @@ const attrClass = (attribute: string): string =>
  *   .dim-filter (0.12) < .dim-soft (0.45 selection context) < .dim-hard (0.08 focus)
  *   < .route-dim < .route-glow < :selected
  */
-export function buildStylesheet(): StyleRule[] {
+export function buildStylesheet(palette: GraphPalette): StyleRule[] {
   const styles: StyleRule[] = [
     {
       selector: 'node',
@@ -29,14 +29,14 @@ export function buildStylesheet(): StyleRule[] {
         height: 56,
         shape: 'round-rectangle',
         'corner-radius': 12,
-        'background-color': THEME.surface2,
+        'background-color': palette.surface2,
         'background-image': 'data(thumb)',
         'background-fit': 'contain',
         'background-opacity': 1,
         'border-width': 2,
-        'border-color': THEME.border,
+        'border-color': palette.border,
         label: 'data(name)',
-        color: THEME.textDim,
+        color: palette.textDim,
         'font-family': 'Hanken Grotesk, system-ui, sans-serif',
         'font-size': 10,
         'font-weight': 600,
@@ -44,7 +44,7 @@ export function buildStylesheet(): StyleRule[] {
         'text-valign': 'bottom',
         'text-halign': 'center',
         'text-margin-y': 5,
-        'text-background-color': THEME.bg,
+        'text-background-color': palette.bg,
         'text-background-opacity': 0.72,
         'text-background-padding': '2px',
         'text-background-shape': 'roundrectangle',
@@ -71,8 +71,8 @@ export function buildStylesheet(): StyleRule[] {
         width: 1,
         height: 1,
         label: 'data(name)',
-        color: THEME.text,
-        'text-opacity': 0.42,
+        color: palette.colLabel,
+        'text-opacity': palette.colLabelOpacity,
         'font-family': 'Hanken Grotesk, system-ui, sans-serif',
         'font-size': 60,
         'font-weight': 800,
@@ -100,10 +100,10 @@ export function buildStylesheet(): StyleRule[] {
       style: {
         width: 1.5,
         'curve-style': 'straight',
-        'line-color': THEME.edge,
+        'line-color': palette.edge,
         'line-opacity': 0.5,
         'target-arrow-shape': 'triangle',
-        'target-arrow-color': THEME.edge,
+        'target-arrow-color': palette.edge,
         'arrow-scale': 0.95,
       },
     },
@@ -116,15 +116,15 @@ export function buildStylesheet(): StyleRule[] {
     },
     {
       selector: 'edge.e-jogress',
-      style: { 'line-color': THEME.jogress, 'target-arrow-color': THEME.jogress, 'line-style': 'dashed', 'line-opacity': 0.5 },
+      style: { 'line-color': palette.jogress, 'target-arrow-color': palette.jogress, 'line-style': 'dashed', 'line-opacity': 0.5 },
     },
     {
       selector: 'edge.e-item',
-      style: { 'line-color': THEME.item, 'target-arrow-color': THEME.item, 'line-style': 'dashed', 'line-dash-pattern': [2, 4], 'line-opacity': 0.5 },
+      style: { 'line-color': palette.item, 'target-arrow-color': palette.item, 'line-style': 'dashed', 'line-dash-pattern': [2, 4], 'line-opacity': 0.5 },
     },
     {
       selector: 'edge.e-bond',
-      style: { 'line-color': THEME.bond, 'target-arrow-color': THEME.bond, 'line-style': 'dashed', 'line-opacity': 0.5 },
+      style: { 'line-color': palette.bond, 'target-arrow-color': palette.bond, 'line-style': 'dashed', 'line-opacity': 0.5 },
     },
     // --- dim/highlight layers, order = precedence ---
     { selector: 'node.dim-filter', style: { opacity: 0.12 } },
@@ -140,8 +140,8 @@ export function buildStylesheet(): StyleRule[] {
     {
       selector: 'edge.lineage-next',
       style: {
-        'line-color': THEME.routeEvolve,
-        'target-arrow-color': THEME.routeEvolve,
+        'line-color': palette.routeEvolve,
+        'target-arrow-color': palette.routeEvolve,
         'line-opacity': 1,
         width: 3,
         'z-index': 8,
@@ -150,8 +150,8 @@ export function buildStylesheet(): StyleRule[] {
     {
       selector: 'edge.lineage-prev',
       style: {
-        'line-color': THEME.accent2,
-        'target-arrow-color': THEME.accent2,
+        'line-color': palette.accent2,
+        'target-arrow-color': palette.accent2,
         'line-opacity': 1,
         width: 3,
         'z-index': 8,
@@ -168,8 +168,8 @@ export function buildStylesheet(): StyleRule[] {
     {
       selector: 'edge.route-glow',
       style: {
-        'line-color': THEME.routeEvolve,
-        'target-arrow-color': THEME.routeEvolve,
+        'line-color': palette.routeEvolve,
+        'target-arrow-color': palette.routeEvolve,
         'line-opacity': 1,
         width: 4,
         'z-index': 10,
@@ -179,14 +179,14 @@ export function buildStylesheet(): StyleRule[] {
     {
       selector: 'edge.route-glow-devolve',
       style: {
-        'line-color': THEME.routeDevolve,
-        'target-arrow-color': THEME.routeDevolve,
+        'line-color': palette.routeDevolve,
+        'target-arrow-color': palette.routeDevolve,
         'line-style': 'dashed',
         'line-opacity': 1,
         width: 4,
         'z-index': 10,
         'source-arrow-shape': 'triangle',
-        'source-arrow-color': THEME.routeDevolve,
+        'source-arrow-color': palette.routeDevolve,
         'target-arrow-shape': 'none',
       },
     },
@@ -195,8 +195,25 @@ export function buildStylesheet(): StyleRule[] {
       style: { opacity: 1, 'z-index': 11 },
     },
     {
+      // the live (hovered) step reads as a charged conduit: dashed so the
+      // controller's rAF can march the pattern toward the goal (line-dash-offset)
       selector: 'edge.route-step-active',
-      style: { width: 7 },
+      style: { width: 7, 'line-style': 'dashed', 'line-dash-pattern': [9, 7], 'z-index': 12 },
+    },
+    // hover feedback: a soft halo in the node's OWN signature colour, so
+    // brushing a Digimon previews the hue the whole UI will take on selection.
+    // Lighter than the .sel halo below (0.3 / pad 10 + pulse), so it never reads
+    // as a selection. (col-labels are excluded by the event handler, not here.)
+    {
+      selector: 'node.hover',
+      style: {
+        'underlay-color': 'data(accent)',
+        'underlay-opacity': 0.2,
+        'underlay-padding': 7,
+        'text-opacity': 1,
+        color: palette.text,
+        'z-index': 6,
+      },
     },
     {
       // custom class instead of :selected — the store is the single source of
@@ -212,7 +229,7 @@ export function buildStylesheet(): StyleRule[] {
         'underlay-opacity': 0.3,
         'underlay-padding': 10,
         'z-index': 12,
-        color: THEME.text,
+        color: palette.text,
         'text-opacity': 1,
       },
     },

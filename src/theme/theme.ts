@@ -1,6 +1,7 @@
 // Light/dark chrome theme. Persisted, system-default, applied via a data-theme
 // attribute on <html> (tokens.css overrides only on [data-theme='light']).
-// The graph viewport stays dark in both — see --graph-bg.
+// The graph viewport is themed too: --graph-bg (CSS) + GRAPH_PALETTES (JS, for
+// Cytoscape) each carry a dark and a light stage. subscribeTheme drives both.
 export type Theme = 'light' | 'dark';
 
 const KEY = 'tst.theme';

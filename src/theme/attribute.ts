@@ -1,4 +1,5 @@
 import type { Attribute } from '../data/schema';
+import type { Theme } from './theme';
 
 /** Single source of truth for attribute colors — consumed by the cytoscape
  *  stylesheet AND injected as CSS custom properties on boot. Retuned in OKLCH
@@ -15,24 +16,73 @@ export const ATTRIBUTE_COLORS: Record<Attribute, string> = {
   'No Data': '#65707b', // d.slate L0.54 H250
 };
 
-/** Graph palette — a warm near-black "Digital World" viewport that stays dark
- *  in both chrome themes so sprites and their chromatic glow always lead. */
-export const THEME = {
-  bg: '#0c0907', // graph backdrop / label plate
-  surface: '#191714',
-  surface2: '#24211e', // node fill
-  border: '#413c38', // node border / quiet edge
-  text: '#f0eeeb',
-  textDim: '#aeaaa5', // node labels
-  edge: '#5a544e',
-  accent: '#f5b845', // default brand amber (per-node glow overrides via data)
-  accent2: '#45bcd6',
-  routeEvolve: '#f5b845', // glowing evolve path
-  routeDevolve: '#9ba6b1', // cool de-evolve path
-  jogress: '#a867e7',
-  item: '#f48d2f',
-  bond: '#45bcd6',
-} as const;
+/** Graph palette — every colour the Cytoscape viewport paints, keyed by chrome
+ *  theme. Cytoscape needs concrete values (it can't read CSS custom properties),
+ *  so the two stages live here rather than in tokens.css and are re-applied on
+ *  theme change (see GraphCanvas). Both stages are built to let the sprites and
+ *  their chromatic glow lead:
+ *    • dark  — a warm near-black "Digital World" at night.
+ *    • light — the same world in daylight: warm parchment, not clinical white
+ *              (stark #fff blows out the sprites); bright card fills so each
+ *              Digimon still reads as raised, with edges/route colours darkened
+ *              to hold their structure on paper. */
+export interface GraphPalette {
+  bg: string; // graph backdrop + node-label plate
+  surface: string;
+  surface2: string; // node fill
+  border: string; // node border fallback / quiet edge
+  text: string;
+  textDim: string; // node labels
+  edge: string;
+  accent: string;
+  accent2: string; // ancestry (evolves-from) lineage links
+  routeEvolve: string; // glowing evolve path / descendant lineage links
+  routeDevolve: string; // cool de-evolve path
+  jogress: string;
+  item: string;
+  bond: string;
+  colLabel: string; // giant ghosted generation watermark
+  colLabelOpacity: number;
+}
+
+export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
+  dark: {
+    bg: '#0c0907',
+    surface: '#191714',
+    surface2: '#24211e',
+    border: '#413c38',
+    text: '#f0eeeb',
+    textDim: '#aeaaa5',
+    edge: '#5a544e',
+    accent: '#f5b845', // default brand amber (per-node glow overrides via data)
+    accent2: '#45bcd6',
+    routeEvolve: '#f5b845',
+    routeDevolve: '#9ba6b1',
+    jogress: '#a867e7',
+    item: '#f48d2f',
+    bond: '#45bcd6',
+    colLabel: '#f0eeeb',
+    colLabelOpacity: 0.42,
+  },
+  light: {
+    bg: '#ece7dd', // warm parchment — matches --graph-bg (light)
+    surface: '#f4efe7',
+    surface2: '#fdfbf7', // bright card so sprites sit on clean ground
+    border: '#c3baac',
+    text: '#2b2721',
+    textDim: '#6b6459',
+    edge: '#857b6a', // warm graphite line — reads on paper at 0.5 opacity
+    accent: '#c07f0d',
+    accent2: '#1c86a3', // deep cyan ancestry links
+    routeEvolve: '#b9790a', // deep ochre-amber path, saturated for paper
+    routeDevolve: '#5f6b78', // muted slate de-evolve
+    jogress: '#7d3fc0',
+    item: '#c2650f',
+    bond: '#1c86a3',
+    colLabel: '#a89e8f', // warm-grey watermark
+    colLabelOpacity: 0.62,
+  },
+};
 
 export const attrVar = (attribute: Attribute): string =>
   `--attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;

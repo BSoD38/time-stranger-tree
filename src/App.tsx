@@ -44,7 +44,7 @@ function Splash({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.splash}>
       <div className={styles.splashMark}>
-        <BrandMark size={56} />
+        <BrandMark size={56} animated />
       </div>
       <h1 className={styles.splashTitle}>
         Time Stranger <span>Tree</span>
@@ -189,7 +189,9 @@ export default function App() {
   const panelContent = routeOpen ? (
     <RoutePlanner />
   ) : selected ? (
-    <DetailPanel slug={selected} />
+    // key by slug so switching Digimon replays the panel's entrance (and the
+    // stat bars re-fill) rather than swapping content in place
+    <DetailPanel key={selected} slug={selected} />
   ) : panelMode === 'dock' ? (
     <EmptyPanel />
   ) : null;

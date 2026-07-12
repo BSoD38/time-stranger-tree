@@ -6,6 +6,22 @@
    the same accent reads correctly in light and dark.
    ============================================================================= */
 
+/* Typed accent channels so the whole UI can *morph* into the selected Digimon's
+   signature hue instead of snapping. Registration is what makes hue/chroma
+   animatable (a plain custom property can't be interpolated). The morph itself
+   is the `transition` on :root below; reduced-motion neutralises it via the
+   global rule at the foot of this file. */
+@property --accent-h {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 72;
+}
+@property --accent-c {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.12;
+}
+
 :root {
   /* -- Chromatic accent (hue+chroma swapped per selection; default: temporal amber) -- */
   --accent-h: 72;
@@ -29,8 +45,12 @@
   --text-dim: oklch(0.745 0.008 72);
   --text-mute: oklch(0.6 0.008 72);
 
-  /* -- Fixed dark "Digital World" viewport (same in both themes) -- */
+  /* -- "Digital World" graph viewport + its floating legend chip. Themed:
+        night (dark) below, daylight parchment in the light override. Keep
+        --graph-bg in step with GRAPH_PALETTES.bg (attribute.ts) so the node
+        label plates blend into the canvas. -- */
   --graph-bg: oklch(0.145 0.008 66);
+  --legend-bg: oklch(0.145 0.008 66 / 0.82);
 
   /* -- Semantic + domain accents -- */
   --danger: oklch(0.68 0.19 25);
@@ -39,9 +59,11 @@
   --jogress: oklch(0.66 0.19 305);
   --bond: oklch(0.74 0.11 215);
 
-  /* -- Type: one humanist family, hierarchy by weight -- */
+  /* -- Type: one humanist family, hierarchy by weight; a squared "digital"
+        face carries the game identity in the wordmark + splash (never data) -- */
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
   --font-body: 'Hanken Grotesk', system-ui, sans-serif;
+  --font-brand: 'Chakra Petch', 'Hanken Grotesk', system-ui, sans-serif;
 
   /* -- Metrics -- */
   --panel-width: 384px;
@@ -65,6 +87,24 @@
 
   --transition-fast: 130ms cubic-bezier(0.22, 0.7, 0.28, 1);
   --transition: 220ms cubic-bezier(0.22, 0.7, 0.28, 1);
+
+  /* -- Motion: expressive ease-out curves + a duration scale. The two
+        --transition tokens above keep the chrome calm; these drive the
+        moments that should feel alive (accent morph, stat fills, entrances). -- */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-press: 110ms;
+  --dur-1: 200ms;
+  --dur-2: 320ms;
+  --dur-3: 480ms;
+
+  /* The chromatic hero: when --accent-h / --accent-c are repainted from the
+     selected sprite (chroma.ts), the whole accent ramp sweeps to the new hue
+     rather than cutting. Kept brisk so it reads as a "charge", not a lag. */
+  transition:
+    --accent-h var(--dur-2) var(--ease-out-quart),
+    --accent-c var(--dur-2) var(--ease-out-quart);
 
   color-scheme: dark;
 }
@@ -92,6 +132,10 @@
 
   --shadow-dropdown: 0 12px 32px oklch(0.55 0.02 66 / 0.2);
   --shadow-panel: -10px 0 30px oklch(0.55 0.02 66 / 0.12);
+
+  /* daylight parchment stage — matches GRAPH_PALETTES.light.bg */
+  --graph-bg: oklch(0.925 0.012 85);
+  --legend-bg: oklch(0.99 0.006 85 / 0.82);
 
   color-scheme: light;
 }
@@ -190,6 +234,7 @@ button {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important; /* neutralise looping idle motion */
     scroll-behavior: auto !important;
   }
 }

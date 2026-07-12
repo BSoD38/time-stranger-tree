@@ -10,6 +10,69 @@ import type { Core } from 'cytoscape';
 const APPEARANCE_CLASSES =
   'sel dim-soft dim-hard dim-filter hidden lineage-next lineage-prev lineage-prev-thin route-dim route-glow route-glow-devolve route-node route-step-active';
 
+const prefersReduce = (): boolean =>
+  window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+
+/**
+ * One-shot "lock-on" when a Digimon is selected: its underlay glow blooms and
+ * settles, in the character's own signature colour (the .sel underlay uses
+ * data(accent)). Purely acknowledgement — no layout, no lasting state.
+ */
+let lastPulsed: string | null = null;
+function clearPulse(cy: ReturnType<typeof getCy>): void {
+  if (!cy || !lastPulsed) return;
+  const prev = cy.$id(lastPulsed);
+  if (prev.length) {
+    prev.stop();
+    prev.removeStyle('underlay-padding underlay-opacity');
+  }
+  lastPulsed = null;
+}
+function pulseSelection(slug: string): void {
+  const cy = getCy();
+  if (!cy || prefersReduce()) return;
+  clearPulse(cy); // kill any lingering glow on the previously-selected node
+  const node = cy.$id(slug);
+  if (!node.length || node.hasClass('col-label')) return;
+  lastPulsed = slug;
+  node
+    .animate({ style: { 'underlay-padding': 22, 'underlay-opacity': 0.5 } }, {
+      duration: 150,
+      easing: 'ease-out-quad',
+    })
+    .animate({ style: { 'underlay-padding': 10, 'underlay-opacity': 0.3 } }, {
+      duration: 480,
+      easing: 'ease-out-cubic',
+      complete: () => node.removeStyle('underlay-padding underlay-opacity'),
+    });
+}
+
+// Marching-ants flow along the live (hovered) route step, throttled to ~30fps
+// so a single dashed edge redraw never competes with interaction. Only runs
+// while a step is active and motion is allowed.
+let flowRAF = 0;
+let flowOffset = 0;
+let flowLast = 0;
+function manageRouteFlow(): void {
+  if (flowRAF) {
+    cancelAnimationFrame(flowRAF);
+    flowRAF = 0;
+  }
+  const cy = getCy();
+  if (!cy || prefersReduce()) return;
+  const edges = cy.edges('.route-step-active');
+  if (!edges.length) return;
+  const tick = (t: number) => {
+    if (t - flowLast >= 33) {
+      flowLast = t;
+      flowOffset -= 1.4;
+      edges.style('line-dash-offset', flowOffset);
+    }
+    flowRAF = requestAnimationFrame(tick);
+  };
+  flowRAF = requestAnimationFrame(tick);
+}
+
 /**
  * Highlight the lineage of `anchor`: nodes/edges outside it get `outsideClass`
  * (hidden / dim-hard / dim-soft), while edges inside are coloured by direction —
@@ -143,8 +206,21 @@ export function useGraphController(): void {
       useStore.subscribe(
         (s) =>
           [s.selected, s.focus, s.hideOthers, s.generations, s.attributes, s.special, s.route, s.routeOpen] as const,
-        () => recompute(useStore.getState()),
+        () => {
+          recompute(useStore.getState());
+          manageRouteFlow(); // (re)bind the flow to the current active-step edge
+        },
         { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
+      ),
+
+      // lock-on pulse when a new Digimon is selected (runs after the appearance
+      // subscription above has stamped .sel, so the accent underlay is present)
+      useStore.subscribe(
+        (s) => s.selected,
+        (selected) => {
+          if (selected) pulseSelection(selected);
+          else clearPulse(getCy());
+        },
       ),
 
       // viewport: pan to a new selection (only when not (re)framing for focus)
@@ -155,8 +231,19 @@ export function useGraphController(): void {
           if (!cy || !selected || useStore.getState().focus) return;
           const node = cy.$id(selected);
           if (!node.length) return;
-          const zoom = cy.zoom() < 0.4 ? { level: 0.8, position: node.position() } : undefined;
-          cy.animate(zoom ? { zoom, duration: 300 } : { center: { eles: node }, duration: 300 });
+          // Cancel any in-flight viewport animation first: cy.animate() queues by
+          // default, so without this a quick second pick would tour through the
+          // previous target(s) instead of heading straight to the newest one.
+          cy.stop();
+          // Always recentre the node; zoom in only if we're currently too far out
+          // to read it. Deriving the pan from the node's model position (rather
+          // than `center: { eles }` / `zoom: { position }`) means the target is
+          // immune to the selection pulse's animating underlay, AND the zoom-in
+          // case actually recentres instead of zooming in place (the old bug).
+          const z = cy.zoom() < 0.4 ? 0.8 : cy.zoom();
+          const p = node.position();
+          const pan = { x: cy.width() / 2 - p.x * z, y: cy.height() / 2 - p.y * z };
+          cy.animate({ zoom: z, pan, duration: 300, easing: 'ease-out-cubic' });
         },
       ),
 
@@ -177,9 +264,17 @@ export function useGraphController(): void {
       ),
     ];
     recompute(useStore.getState());
+    manageRouteFlow();
     // deep-linked focus is set before we subscribe — frame it once on mount
     const cy = getCy();
     if (cy && useStore.getState().focus) frameGraph(cy, false);
-    return () => unsubscribers.forEach((u) => u());
+    return () => {
+      unsubscribers.forEach((u) => u());
+      if (flowRAF) {
+        cancelAnimationFrame(flowRAF);
+        flowRAF = 0;
+      }
+      lastPulsed = null;
+    };
   }, []);
 }
