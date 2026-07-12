@@ -1,5 +1,5 @@
 import { appData } from '../data/appData';
-import { ATTRIBUTE_KEYS, GENERATION_KEYS } from '../data/schema';
+import { ATTRIBUTE_KEYS } from '../data/schema';
 import { filterSlugs, hasActiveCriteria, type SpecialFacet } from '../data/search';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
@@ -14,31 +14,21 @@ const SPECIAL: Array<{ key: SpecialFacet; label: string; title: string }> = [
 ];
 
 export function FilterBar() {
-  const generations = useStore((s) => s.generations);
   const attributes = useStore((s) => s.attributes);
   const special = useStore((s) => s.special);
-  const toggleGeneration = useStore((s) => s.toggleGeneration);
   const toggleAttribute = useStore((s) => s.toggleAttribute);
   const toggleSpecial = useStore((s) => s.toggleSpecial);
   const clearFilters = useStore((s) => s.clearFilters);
 
-  const criteria = { generations, attributes, special };
+  // No generation filter here: in the tree, generation is already the spatial
+  // axis (bands + watermarks + shading), so filtering by it is redundant and
+  // just collapses a stage to one row. The Codex table keeps its own (codex.*).
+  const criteria = { attributes, special };
   const active = hasActiveCriteria(criteria);
   const count = active ? filterSlugs(appData().db, criteria).size : 475;
 
   return (
     <div className={styles.bar}>
-      <FilterChipGroup label="Gen">
-        {GENERATION_KEYS.map((generation) => (
-          <FilterChip
-            key={generation}
-            active={generations.has(generation)}
-            onClick={() => toggleGeneration(generation)}
-          >
-            {generation}
-          </FilterChip>
-        ))}
-      </FilterChipGroup>
       <FilterChipGroup label="Attribute">
         {ATTRIBUTE_KEYS.map((attribute) => (
           <FilterChip

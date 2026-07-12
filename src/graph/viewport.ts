@@ -2,7 +2,7 @@ import type { Core } from 'cytoscape';
 import { appData } from '../data/appData';
 import { lineage } from '../data/graph';
 import type { Route } from '../data/route';
-import { focusPos, minimizeBandCrossings } from './crossing';
+import { FOCUS_PITCH, focusPos, minimizeBandCrossings } from './crossing';
 import { genAxis, genLabelPos, orient, spreadAxis, type Orientation } from './orient';
 
 /** Spread-axis pitch between consecutive steps in the compact route view. */
@@ -91,6 +91,42 @@ export function compactRoute(cy: Core, route: Route, orientation: Orientation): 
       const gen = levelOf.get(base.x)! * ROUTE_BAND_PITCH;
       cy.$id(slug).position(orient({ x: gen, y: (i - mid) * ROUTE_PITCH }, orientation));
     });
+  });
+}
+
+/**
+ * Compact a filtered set the way compactFocus compacts a lineage — but a filter
+ * result is an arbitrary subset, not one connected family. So each match keeps
+ * its TRUE generation coordinate (the stages stay put and still line up with the
+ * generation band shading) while its band is re-packed tightly, closing the wide
+ * gaps the hidden non-matches leave behind. Members hold their stable base
+ * spread order within a band; there's no lineage to run a crossing pass over.
+ * Only the matches move; non-matches are hidden.
+ *
+ * Members pack from the START of the spread axis (not centred like compactFocus),
+ * so a wide band never reaches back into the margin where the generation
+ * watermarks sit — matching how the full graph keeps its columns clear of the
+ * labels. compactFocus can centre because focus hides the labels; here they stay.
+ */
+export function compactFilter(
+  cy: Core,
+  matching: ReadonlySet<string>,
+  orientation: Orientation,
+): void {
+  const { positions } = appData().layout;
+  const byGen = new Map<number, string[]>();
+  for (const slug of matching) {
+    const base = positions[slug];
+    if (!base) continue;
+    (byGen.get(base.x) ?? byGen.set(base.x, []).get(base.x)!).push(slug);
+  }
+  cy.batch(() => {
+    for (const [genX, slugs] of byGen) {
+      slugs.sort((a, b) => positions[a].y - positions[b].y);
+      slugs.forEach((slug, i) => {
+        cy.$id(slug).position(orient({ x: genX, y: i * FOCUS_PITCH }, orientation));
+      });
+    }
   });
 }
 

@@ -87,7 +87,8 @@ export interface AppState {
   view: AppView;
   selected: string | null;
   focus: string | null;
-  generations: ReadonlySet<Generation>;
+  // Tree filters: attribute + trait only. Generation is the graph's spatial axis,
+  // so it isn't a tree filter (the Codex keeps its own generation filter, codex.*).
   attributes: ReadonlySet<Attribute>;
   special: ReadonlySet<SpecialFacet>;
   filtersOpen: boolean;
@@ -109,7 +110,6 @@ export interface AppState {
   setOrientation(value: Orientation): void;
   setHideOthers(value: boolean): void;
   setSettingsOpen(open: boolean): void;
-  toggleGeneration(value: Generation): void;
   toggleAttribute(value: Attribute): void;
   toggleSpecial(value: SpecialFacet): void;
   clearFilters(): void;
@@ -145,7 +145,6 @@ export const useStore = create<AppState>()(
     view: 'graph',
     selected: null,
     focus: null,
-    generations: new Set<Generation>(),
     attributes: new Set<Attribute>(),
     special: new Set<SpecialFacet>(),
     filtersOpen: false,
@@ -178,11 +177,9 @@ export const useStore = create<AppState>()(
       savePrefs({ orientation: get().orientation, hideOthers: value });
     },
     setSettingsOpen: (open) => set({ settingsOpen: open }),
-    toggleGeneration: (value) => set({ generations: toggled(get().generations, value) }),
     toggleAttribute: (value) => set({ attributes: toggled(get().attributes, value) }),
     toggleSpecial: (value) => set({ special: toggled(get().special, value) }),
-    clearFilters: () =>
-      set({ generations: new Set(), attributes: new Set(), special: new Set() }),
+    clearFilters: () => set({ attributes: new Set(), special: new Set() }),
     setFiltersOpen: (open) => set({ filtersOpen: open }),
 
     openRoute: (partial) =>

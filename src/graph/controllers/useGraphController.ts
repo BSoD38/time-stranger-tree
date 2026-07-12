@@ -4,11 +4,11 @@ import { descendants, edgeKey, lineage } from '../../data/graph';
 import { filterSlugs, hasActiveCriteria } from '../../data/search';
 import { useStore, type AppState } from '../../state/store';
 import { getCy } from '../cyInstance';
-import { compactFocus, compactRoute, reorientGraph, resetView } from '../viewport';
+import { compactFilter, compactFocus, compactRoute, reorientGraph, resetView } from '../viewport';
 import type { Core } from 'cytoscape';
 
 const APPEARANCE_CLASSES =
-  'sel dim-soft dim-hard dim-filter hidden lineage-next lineage-prev lineage-prev-thin route-dim route-glow route-glow-devolve route-node route-step-active';
+  'sel dim-soft dim-hard dim-filter hidden lineage-next lineage-prev lineage-prev-thin filter-mute route-dim route-glow route-glow-devolve route-node route-step-active';
 
 const prefersReduce = (): boolean =>
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
@@ -123,17 +123,29 @@ function recompute(state: AppState): void {
       paintLineage(cy, state.selected, 'dim-soft');
     }
 
-    // filter layer (dim-only; weaker than dim-hard by stylesheet order)
-    const criteria = {
-      generations: state.generations,
-      attributes: state.attributes,
-      special: state.special,
-    };
+    // filter layer. In the normal tree view a filter isolates: non-matches are
+    // hidden outright (frameGraph then re-packs the matches). Inside focus /
+    // route that mode already owns the layout, so filters only grey out
+    // (dim-filter, weaker than dim-hard by stylesheet order). Generation
+    // watermarks are never touched — they label the stages in every mode.
+    const criteria = { attributes: state.attributes, special: state.special };
     if (hasActiveCriteria(criteria)) {
       const matching = filterSlugs(db, criteria);
+      const isolating = Boolean(state.focus) || state.routeOpen;
+      const outside = isolating ? 'dim-filter' : 'hidden';
       cy.nodes().forEach((n) => {
-        if (!matching.has(n.id())) n.addClass('dim-filter');
+        if (!n.hasClass('col-label') && !matching.has(n.id())) n.addClass(outside);
       });
+      // A highlighted lineage arrow touching a greyed-out node should fade with
+      // it, not stay loud. (Only the lineage highlight — route glow is left be,
+      // and non-focus context edges are already dimmed by their own layer.)
+      if (isolating) {
+        cy.edges('.lineage-next, .lineage-prev').forEach((e) => {
+          if (!matching.has(e.source().id()) || !matching.has(e.target().id())) {
+            e.addClass('filter-mute');
+          }
+        });
+      }
     }
 
     // route layer: route elements at full strength, everything else either
@@ -172,6 +184,7 @@ function fitEles(cy: Core, slugs: Set<string>, padding: number, animate: boolean
  *   • focused + "hide others" → compact the lineage tight and frame it
  *   • focused + "dim others"  → lineage in place (full graph), framed
  *   • route open              → frame the route path
+ *   • filtered (normal view)  → compact the matches into their bands, framed
  *   • otherwise               → anchor the selection, or the opening slab
  */
 function frameGraph(cy: Core, animate = true): void {
@@ -196,6 +209,17 @@ function frameGraph(cy: Core, animate = true): void {
   }
 
   reorientGraph(cy, o);
+
+  // Normal tree view: an active filter isolates + re-packs the matches, mirroring
+  // focus. (Skipped while the route planner is open — recompute only dims there.)
+  const criteria = { attributes: state.attributes, special: state.special };
+  if (!state.routeOpen && hasActiveCriteria(criteria)) {
+    const matching = filterSlugs(appData().db, criteria);
+    compactFilter(cy, matching, o);
+    fitEles(cy, matching, 60, animate);
+    return;
+  }
+
   const anchor = state.selected ? cy.$id(state.selected) : null;
   if (anchor?.length) {
     cy.animate({ zoom: { level: 0.6, position: anchor.position() }, duration: 350 });
@@ -210,7 +234,7 @@ export function useGraphController(): void {
       // appearance: any of these slices changes → one full recompute
       useStore.subscribe(
         (s) =>
-          [s.selected, s.focus, s.hideOthers, s.generations, s.attributes, s.special, s.route, s.routeOpen] as const,
+          [s.selected, s.focus, s.hideOthers, s.attributes, s.special, s.route, s.routeOpen] as const,
         () => {
           recompute(useStore.getState());
           manageRouteFlow(); // (re)bind the flow to the current active-step edge
@@ -252,13 +276,16 @@ export function useGraphController(): void {
         },
       ),
 
-      // layout + viewport: recompute positions and framing together
+      // layout + viewport: recompute positions and framing together. Filter
+      // criteria are here too — in the normal view they isolate + re-pack.
       useStore.subscribe(
         (s) =>
           [
             s.focus,
             s.hideOthers,
             s.orientation,
+            s.attributes,
+            s.special,
             s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
           ] as const,
         () => {

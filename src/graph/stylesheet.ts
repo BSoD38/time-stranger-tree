@@ -163,6 +163,14 @@ export function buildStylesheet(palette: GraphPalette): StyleRule[] {
       selector: 'edge.lineage-prev-thin',
       style: { width: 2 },
     },
+    // an active filter greys out the non-matching Digimon; a highlighted lineage
+    // arrow into/out of one of them must fade to match (this rule follows the
+    // lineage colours so it wins their line-opacity, but precedes the route
+    // layers so a route's own glowing edges are never muted).
+    {
+      selector: 'edge.filter-mute',
+      style: { opacity: 0.14, 'line-opacity': 0.5, 'z-index': 1 },
+    },
     { selector: 'node.route-dim', style: { opacity: 0.1 } },
     { selector: 'edge.route-dim', style: { 'line-opacity': 0.03 } },
     {
