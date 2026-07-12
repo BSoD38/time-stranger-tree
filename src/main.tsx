@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 // Body / UI face. Import only the Latin + Latin-ext subsets (dropping the
 // Cyrillic/Vietnamese/Thai @font-face rules Google ships by default) for the
 // weights this UI actually uses. Glyphs still load on demand via unicode-range.
@@ -26,5 +27,6 @@ initTheme();
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <App />
+    <SpeedInsights />
   </React.StrictMode>,
 );
