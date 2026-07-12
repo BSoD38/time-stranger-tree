@@ -93,11 +93,87 @@
 }
 
 /* Filter chip groups use the shared ui/FilterChip (same as the graph FilterBar).
-   .filters just lays the groups out. */
+   Desktop: the two groups sit inline and the toggle is hidden. Phone: a "Filters"
+   toggle collapses the groups to reclaim vertical space (see the 639px block). */
 .filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.filterGroups {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
+}
+
+/* Phone-only disclosure control + its collapsed active-filter summary. */
+.filterToggle {
+  display: none; /* shown on phones */
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  text-align: left;
+}
+.chevron {
+  flex: none;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-mute);
+  transition: color var(--transition-fast);
+}
+.filterToggle:hover .chevron,
+.filterToggle[aria-expanded='true'] .chevron {
+  color: var(--text);
+}
+.filterToggleLabel {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.filterToggle:hover .filterToggleLabel {
+  color: var(--text);
+}
+/* Applied facets, summarised inline while collapsed. Clips gracefully if the few
+   shown chips still overrun a very narrow screen. */
+.summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+.sumChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sumDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--text) 16%, transparent);
+}
+.sumMore {
+  flex: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mute);
+  font-variant-numeric: tabular-nums;
 }
 
 @media (pointer: coarse) {
@@ -225,13 +301,37 @@
   color: var(--text);
   text-align: left;
 }
+/* Sprite + its phone-only attribute badge. */
+.portrait {
+  position: relative;
+  flex: none;
+  line-height: 0;
+}
 /* Placeholder tint behind the shared Sprite while the thumbnail lazy-loads. */
 .sprite {
   background: var(--surface-2);
 }
+/* Attribute colour as a badge on the portrait. Hidden by default (the Attribute
+   column carries it); shown on phones where that column is dropped. */
+.attrBadge {
+  display: none;
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--bg);
+}
 .nameText {
+  display: block;
+  min-width: 0;
+  max-width: 15rem;
+  overflow: hidden;
   font-size: 13px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   transition: color var(--transition-fast);
 }
 
@@ -346,13 +446,50 @@ tbody .stickyName {
 }
 
 @media (max-width: 639px) {
+  /* Phone: the stats ARE the table, so hand them the width budget. The Gen +
+     Attribute columns are dropped (both still live in the filter chips above and
+     the detail panel; attribute survives as the portrait badge), the frozen
+     #/name zone is slimmed, and the numeric grid tightens — so scrolling right
+     lands you in stats immediately instead of chrome. */
+  .table {
+    --num-w: 44px;
+    min-width: 500px;
+  }
+  .optional {
+    display: none;
+  }
+  .attrBadge {
+    display: block;
+  }
+
   .cell {
     padding: 6px 9px;
+  }
+  .numeric {
+    padding-right: 7px;
+    padding-left: 7px;
   }
   .sortBtn {
     padding: 8px 9px;
   }
+  .thNumeric .sortBtn {
+    padding-right: 7px;
+    padding-left: 7px;
+  }
+  .totalCell {
+    min-width: 60px;
+  }
   .nameText {
+    max-width: 104px;
     font-size: 12.5px;
+  }
+
+  /* Collapse the filter chip groups behind the toggle. */
+  .filterToggle {
+    display: flex;
+    min-height: 36px;
+  }
+  .filterGroups[data-open='false'] {
+    display: none;
   }
 }

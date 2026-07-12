@@ -1,24 +1,42 @@
 import { useRef, type PointerEvent as ReactPointerEvent, type RefObject } from 'react';
 
-const DISMISS_PX = 88; // drag the sheet down past this and it closes
+const TOGGLE_PX = 64; // drag past this (in the collapse/expand direction) to switch state
 const TAP_PX = 6; // below this the gesture is a tap, handled by onClick
 
 /**
- * Drag-to-dismiss for the mobile bottom sheet. Attach the returned handlers to
- * the grab handle; the sheet element (`hostRef`) follows the finger downward and
- * either dismisses past a threshold or springs back. A plain tap falls through to
- * `onClick` so the handle also works with a keyboard / assistive tech.
+ * Drag-to-minimise for the mobile bottom sheet. Attach the returned handlers to
+ * the grab handle. Dragging the sheet down past a threshold *collapses* it to a
+ * peek strip at the bottom (keeping the selection / route alive); dragging back
+ * up — or tapping the handle — restores it. Dismissing outright is a separate,
+ * explicit action (the ✕ button), never the drag: that's what stops the sheet
+ * from silently tearing down the route/selection when you only meant to peek at
+ * the graph behind it.
  *
  * Positions are written straight to the DOM during the drag (no per-frame React
  * render); the class-driven CSS transition is suspended for the duration and
- * restored on release so the spring-back / dismiss animates.
+ * restored on release so the settle animates. `peekPx` must match the CSS
+ * `--sheet-peek` height so the collapsed baseline lines up with the class state.
  */
 export function useSheetDrag<T extends HTMLElement>(
   hostRef: RefObject<T | null>,
-  { enabled, onClose }: { enabled: boolean; onClose: () => void },
+  {
+    enabled,
+    collapsed,
+    onCollapse,
+    onExpand,
+    peekPx,
+  }: {
+    enabled: boolean;
+    collapsed: boolean;
+    onCollapse: () => void;
+    onExpand: () => void;
+    peekPx: number;
+  },
 ) {
   const drag = useRef({ active: false, startY: 0, dy: 0 });
   const suppressClick = useRef(false);
+
+  const collapsedOffset = (host: T) => Math.max(0, host.offsetHeight - peekPx);
 
   const onPointerDown = (event: ReactPointerEvent) => {
     if (!enabled) return;
@@ -35,8 +53,12 @@ export function useSheetDrag<T extends HTMLElement>(
     if (!d.active) return;
     const host = hostRef.current;
     if (!host) return;
-    d.dy = Math.max(0, event.clientY - d.startY); // downward only
-    host.style.transform = `translateY(${d.dy}px)`;
+    d.dy = event.clientY - d.startY;
+    // Follow the finger from the current state's baseline, clamped between fully
+    // open (0) and the collapsed peek offset.
+    const base = collapsed ? collapsedOffset(host) : 0;
+    const next = Math.min(collapsedOffset(host), Math.max(0, base + d.dy));
+    host.style.transform = `translateY(${next}px)`;
   };
 
   const finish = () => {
@@ -46,16 +68,25 @@ export function useSheetDrag<T extends HTMLElement>(
     const host = hostRef.current;
     if (!host) return;
     host.style.transition = ''; // hand animation back to CSS
-    if (d.dy > DISMISS_PX) {
-      // let the closed-state class carry it the rest of the way down
-      suppressClick.current = true;
-      host.style.transform = 'translateY(100%)';
-      onClose();
-    } else if (d.dy > TAP_PX) {
-      suppressClick.current = true; // a deliberate drag, not a tap → don't also close
-      host.style.transform = '';
+    const offset = collapsedOffset(host);
+
+    if (Math.abs(d.dy) <= TAP_PX) {
+      host.style.transform = ''; // a tap — let onClick toggle the state
+      return;
+    }
+    suppressClick.current = true; // a deliberate drag, not a tap
+
+    if (!collapsed && d.dy > TOGGLE_PX) {
+      // Settle to the collapsed baseline (matches the data-collapsed CSS), then
+      // flip state so the class takes over without a jump.
+      host.style.transform = `translateY(${offset}px)`;
+      onCollapse();
+    } else if (collapsed && d.dy < -TOGGLE_PX) {
+      host.style.transform = 'translateY(0px)';
+      onExpand();
     } else {
-      host.style.transform = '';
+      // Not far enough — spring back to the current state.
+      host.style.transform = collapsed ? `translateY(${offset}px)` : 'translateY(0px)';
     }
   };
 
@@ -64,7 +95,8 @@ export function useSheetDrag<T extends HTMLElement>(
       suppressClick.current = false;
       return;
     }
-    onClose();
+    if (collapsed) onExpand();
+    else onCollapse();
   };
 
   return { onPointerDown, onPointerMove, onPointerUp: finish, onPointerCancel: finish, onClick };

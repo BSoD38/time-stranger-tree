@@ -1,4 +1,4 @@
-import { Fragment, memo, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, memo, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { appData } from '../data/appData';
 import { ATTRIBUTE_KEYS, GENERATION_KEYS, STAT_KEYS, type StatLevel } from '../data/schema';
 import { useSearchHotkey } from '../search/useSearchHotkey';
@@ -53,14 +53,27 @@ const CodexTableRow = memo(function CodexTableRow({
           }}
           title={`View ${row.name} in the Tree`}
         >
-          <Sprite slug={row.slug} size={26} className={styles.sprite} />
+          <span className={styles.portrait}>
+            <Sprite slug={row.slug} size={26} className={styles.sprite} />
+            {/* Attribute survives as a portrait badge on phones, where the
+                standalone Attribute column is dropped to free width for stats. */}
+            <span
+              className={styles.attrBadge}
+              style={{ background: ATTRIBUTE_COLORS[row.attribute] }}
+              title={row.attribute}
+            />
+          </span>
           <span className={styles.nameText}>{row.name}</span>
         </button>
       </td>
-      <td className={`${styles.cell} ${styles.gen} ${sortKey === 'generation' ? styles.sortedCell : ''}`}>
+      <td
+        className={`${styles.cell} ${styles.gen} ${styles.optional} ${sortKey === 'generation' ? styles.sortedCell : ''}`}
+      >
         {row.generation}
       </td>
-      <td className={`${styles.cell} ${styles.attr} ${sortKey === 'attribute' ? styles.sortedCell : ''}`}>
+      <td
+        className={`${styles.cell} ${styles.attr} ${styles.optional} ${sortKey === 'attribute' ? styles.sortedCell : ''}`}
+      >
         <span className={styles.attrDot} style={{ background: ATTRIBUTE_COLORS[row.attribute] }} />
         {row.attribute}
       </td>
@@ -126,17 +139,36 @@ export function CodexPage() {
   const clearAll = () =>
     patchCodex({ query: '', generations: new Set(), attributes: new Set() });
 
+  // Phone-only: the chip groups collapse behind a toggle to reclaim vertical
+  // space above the table. When collapsed, the active facets are summarised
+  // inline (canonical game order) so what's applied stays visible.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const activeFacets: Array<{ key: string; label: string; color?: string }> = [
+    ...GENERATION_KEYS.filter((g) => gens.has(g)).map((g) => ({ key: `g:${g}`, label: g })),
+    ...ATTRIBUTE_KEYS.filter((a) => attrs.has(a)).map((a) => ({
+      key: `a:${a}`,
+      label: a,
+      color: ATTRIBUTE_COLORS[a],
+    })),
+  ];
+  const SUMMARY_CAP = 3;
+
   const onSort = (key: SortKey) => {
     if (key === sortKey) patchCodex({ sortDir: sortDir === 'asc' ? 'desc' : 'asc' });
     else patchCodex({ sortKey: key, sortDir: defaultDir(key) });
   };
 
-  const th = (key: SortKey, label: ReactNode, opts: { numeric?: boolean; sticky?: string; title?: string } = {}) => {
+  const th = (
+    key: SortKey,
+    label: ReactNode,
+    opts: { numeric?: boolean; sticky?: string; title?: string; cls?: string } = {},
+  ) => {
     const active = sortKey === key;
     const classes = [
       styles.th,
       opts.numeric ? styles.thNumeric : '',
       opts.sticky ?? '',
+      opts.cls ?? '',
       active ? styles.thActive : '',
     ]
       .filter(Boolean)
@@ -186,30 +218,60 @@ export function CodexPage() {
         </div>
 
         <div className={styles.filters}>
-          <FilterChipGroup label="Gen">
-            {GENERATION_KEYS.map((g) => (
-              <FilterChip
-                key={g}
-                active={gens.has(g)}
-                onClick={() => patchCodex({ generations: toggled(gens, g) })}
-              >
-                {g}
-              </FilterChip>
-            ))}
-          </FilterChipGroup>
-          <FilterChipGroup label="Attribute">
-            {ATTRIBUTE_KEYS.map((a) => (
-              <FilterChip
-                key={a}
-                active={attrs.has(a)}
-                color={ATTRIBUTE_COLORS[a]}
-                dot
-                onClick={() => patchCodex({ attributes: toggled(attrs, a) })}
-              >
-                {a}
-              </FilterChip>
-            ))}
-          </FilterChipGroup>
+          <button
+            type="button"
+            className={styles.filterToggle}
+            aria-expanded={filtersOpen}
+            aria-controls="codex-filters"
+            onClick={() => setFiltersOpen((o) => !o)}
+          >
+            <span className={styles.chevron} aria-hidden="true">
+              {filtersOpen ? '▾' : '▸'}
+            </span>
+            <span className={styles.filterToggleLabel}>Filters</span>
+            {!filtersOpen && activeFacets.length > 0 && (
+              <span className={styles.summary}>
+                {activeFacets.slice(0, SUMMARY_CAP).map((f) => (
+                  <span key={f.key} className={styles.sumChip}>
+                    {f.color && (
+                      <span className={styles.sumDot} style={{ background: f.color }} />
+                    )}
+                    {f.label}
+                  </span>
+                ))}
+                {activeFacets.length > SUMMARY_CAP && (
+                  <span className={styles.sumMore}>+{activeFacets.length - SUMMARY_CAP}</span>
+                )}
+              </span>
+            )}
+          </button>
+
+          <div id="codex-filters" className={styles.filterGroups} data-open={filtersOpen}>
+            <FilterChipGroup label="Gen">
+              {GENERATION_KEYS.map((g) => (
+                <FilterChip
+                  key={g}
+                  active={gens.has(g)}
+                  onClick={() => patchCodex({ generations: toggled(gens, g) })}
+                >
+                  {g}
+                </FilterChip>
+              ))}
+            </FilterChipGroup>
+            <FilterChipGroup label="Attribute">
+              {ATTRIBUTE_KEYS.map((a) => (
+                <FilterChip
+                  key={a}
+                  active={attrs.has(a)}
+                  color={ATTRIBUTE_COLORS[a]}
+                  dot
+                  onClick={() => patchCodex({ attributes: toggled(attrs, a) })}
+                >
+                  {a}
+                </FilterChip>
+              ))}
+            </FilterChipGroup>
+          </div>
         </div>
       </div>
 
@@ -219,8 +281,8 @@ export function CodexPage() {
             <tr>
               {th('number', '#', { numeric: true, sticky: styles.stickyNum, title: 'Dex number' })}
               {th('name', 'Digimon', { sticky: styles.stickyName })}
-              {th('generation', 'Gen')}
-              {th('attribute', 'Attribute')}
+              {th('generation', 'Gen', { cls: styles.optional })}
+              {th('attribute', 'Attribute', { cls: styles.optional })}
               {STAT_KEYS.map((s) => (
                 <Fragment key={s}>{th(s, s, { numeric: true, title: STAT_TITLES[s] })}</Fragment>
               ))}

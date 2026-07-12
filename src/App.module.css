@@ -159,6 +159,7 @@
 
 /* Phone: a bottom sheet, rounded top, capped height, sliding up. */
 .panelHost[data-mode='sheet'] {
+  --sheet-peek: 96px; /* fallback; set precisely from the measured header (App.tsx) */
   left: 0;
   right: 0;
   bottom: 0;
@@ -176,6 +177,10 @@
   transform: translateY(0);
   visibility: visible;
 }
+/* Collapsed: slide down so only the grip + peek bar show, revealing the graph. */
+.panelHost[data-mode='sheet'][data-open='true'][data-collapsed='true'] {
+  transform: translateY(calc(100% - var(--sheet-peek)));
+}
 .panelHost[data-mode='sheet'][data-open='false'] {
   transform: translateY(100%);
   visibility: hidden;
@@ -187,7 +192,7 @@
   background: transparent;
 }
 
-/* Bottom-sheet grab handle: a drag target that also taps to dismiss. */
+/* Bottom-sheet grab handle: drag to minimise / restore, tap to toggle. */
 .grip {
   display: grid;
   place-items: center;

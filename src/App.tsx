@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import styles from './App.module.css';
 import { initAppData } from './data/appData';
 import { loadDatabase, prefetchThumbnails } from './data/load';
@@ -61,22 +61,35 @@ function Splash({ children }: { children: React.ReactNode }) {
 
 type PanelMode = 'dock' | 'drawer' | 'sheet';
 
+// Fallback collapsed-sheet height until the panel header is measured.
+const SHEET_PEEK_FALLBACK = 96;
+
 /**
  * Hosts the detail / route / empty panel. On desktop the panel is docked in the
  * flex row and displaces the graph (master–detail). Below 1024px the graph stays
  * full-bleed and the panel floats over it: a right-hand drawer on tablets, a
  * bottom sheet on phones. The same panel components render in every mode — only
  * the container and its dismiss affordances change.
+ *
+ * The phone sheet has three states: expanded, collapsed, and closed. Dragging /
+ * tapping the grip toggles expanded ↔ collapsed; collapsing slides the sheet down
+ * until only its own header row (icon · name · #number · tags · ✕) peeks above
+ * the bottom edge, so the focused / route graph is visible while the selection
+ * stays put. Closing is the explicit ✕ in that header, never the drag.
  */
 function PanelHost({
   mode,
   open,
-  onClose,
+  collapsed,
+  onCollapse,
+  onExpand,
   children,
 }: {
   mode: PanelMode;
   open: boolean;
-  onClose: () => void;
+  collapsed: boolean;
+  onCollapse: () => void;
+  onExpand: () => void;
   children: React.ReactNode;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -86,16 +99,44 @@ function PanelHost({
   useEffect(() => {
     if (open) setContent(children);
   }, [open, children]);
-  // Clear any drag-applied inline transform when (re)opening so the CSS
-  // open-state class can slide the sheet back into view.
+  // Clear any drag-applied inline transform whenever the open/collapsed state
+  // changes so the CSS class for the new state animates it into place.
   useEffect(() => {
-    if (open && hostRef.current) {
+    if (hostRef.current) {
       hostRef.current.style.transform = '';
       hostRef.current.style.transition = '';
     }
-  }, [open]);
+  }, [open, collapsed]);
 
-  const drag = useSheetDrag(hostRef, { enabled: mode === 'sheet', onClose });
+  const sheet = mode === 'sheet';
+
+  // Collapsed peek height = the grip + the panel's own header row. Measured so it
+  // tracks the header exactly (including chips wrapping to a second line) and
+  // re-measured when the content swaps or the header reflows.
+  const [peekPx, setPeekPx] = useState(SHEET_PEEK_FALLBACK);
+  useLayoutEffect(() => {
+    if (!sheet) return;
+    const host = hostRef.current;
+    if (!host) return;
+    const measure = () => {
+      const header = host.querySelector('header');
+      if (header instanceof HTMLElement) setPeekPx(header.offsetTop + header.offsetHeight);
+    };
+    measure();
+    const header = host.querySelector('header');
+    if (!(header instanceof HTMLElement)) return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(header);
+    return () => ro.disconnect();
+  }, [sheet, content, open]);
+
+  const drag = useSheetDrag(hostRef, {
+    enabled: sheet,
+    collapsed,
+    onCollapse,
+    onExpand,
+    peekPx,
+  });
 
   // Docked: the panel is a normal flex child; no overlay chrome.
   if (mode === 'dock') return <>{children}</>;
@@ -106,10 +147,18 @@ function PanelHost({
       className={styles.panelHost}
       data-mode={mode}
       data-open={open}
+      data-collapsed={sheet && collapsed}
       aria-hidden={!open}
+      style={sheet ? ({ '--sheet-peek': `${peekPx}px` } as CSSProperties) : undefined}
     >
-      {mode === 'sheet' && (
-        <button type="button" className={styles.grip} aria-label="Close panel" {...drag}>
+      {sheet && (
+        <button
+          type="button"
+          className={styles.grip}
+          aria-label={collapsed ? 'Expand panel' : 'Minimize panel'}
+          aria-expanded={!collapsed}
+          {...drag}
+        >
           <span className={styles.gripBar} />
         </button>
       )}
@@ -162,12 +211,14 @@ export default function App() {
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
 
-  // Dismiss whatever the overlay panel is currently showing.
-  const closePanel = useCallback(() => {
-    const store = useStore.getState();
-    if (store.routeOpen) exitRoute();
-    else store.select(null);
-  }, []);
+  // Phone bottom-sheet peek state. Collapsing keeps the route / selection (and
+  // the graph behind it) alive — closing is the explicit ✕ in the panel header.
+  // Reset to expanded whenever what the panel shows changes, so a fresh pick
+  // always opens fully.
+  const [sheetCollapsed, setSheetCollapsed] = useState(false);
+  useEffect(() => {
+    setSheetCollapsed(false);
+  }, [selected, routeOpen]);
 
   if (error) {
     return (
@@ -266,7 +317,13 @@ export default function App() {
               ))}
             </div>
           </main>
-          <PanelHost mode={panelMode} open={routeOpen || Boolean(selected)} onClose={closePanel}>
+          <PanelHost
+            mode={panelMode}
+            open={routeOpen || Boolean(selected)}
+            collapsed={sheetCollapsed}
+            onCollapse={() => setSheetCollapsed(true)}
+            onExpand={() => setSheetCollapsed(false)}
+          >
             {panelContent}
           </PanelHost>
         </div>
