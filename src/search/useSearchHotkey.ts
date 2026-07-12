@@ -5,7 +5,7 @@ import { useEffect, type RefObject } from 'react';
  * and selects the given input. Shared by the graph SearchBox and the Codex
  * filter so the shortcut works on whichever search is currently on screen.
  */
-export function useSearchHotkey(inputRef: RefObject<HTMLInputElement>): void {
+export function useSearchHotkey(inputRef: RefObject<HTMLInputElement | null>): void {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const typing = (event.target as HTMLElement)?.tagName === 'INPUT';

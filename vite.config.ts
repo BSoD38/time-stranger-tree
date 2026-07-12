@@ -10,9 +10,11 @@ export default defineConfig({
         // Split the heavy, rarely-changing vendors into their own chunks:
         // cytoscape is ~400 kB on its own, so keeping it out of the app chunk
         // lets it download in parallel and stay cached across app deploys.
-        manualChunks: {
-          cytoscape: ['cytoscape'],
-          react: ['react', 'react-dom'],
+        // Vite 8's bundler (Rolldown) takes `manualChunks` as a function only;
+        // the object shorthand from Rollup is no longer accepted.
+        manualChunks(id) {
+          if (/[\\/]node_modules[\\/]cytoscape[\\/]/.test(id)) return 'cytoscape';
+          if (/[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/.test(id)) return 'react';
         },
       },
     },

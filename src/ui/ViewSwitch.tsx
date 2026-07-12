@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import type { AppView } from '../state/store';
 import styles from './ViewSwitch.module.css';
 
