@@ -9,18 +9,19 @@ interface ChipProps {
 }
 
 export function Chip({ children, color, title, onClick }: ChipProps) {
-  const style: CSSProperties | undefined = color
-    ? { borderColor: color, color }
-    : undefined;
+  const style = color ? ({ '--chip-color': color } as CSSProperties) : undefined;
+  const className = [styles.chip, color ? styles.tinted : '', onClick ? styles.clickable : '']
+    .filter(Boolean)
+    .join(' ');
   if (onClick) {
     return (
-      <button className={`${styles.chip} ${styles.clickable}`} style={style} title={title} onClick={onClick}>
+      <button className={className} style={style} title={title} onClick={onClick}>
         {children}
       </button>
     );
   }
   return (
-    <span className={styles.chip} style={style} title={title}>
+    <span className={className} style={style} title={title}>
       {children}
     </span>
   );

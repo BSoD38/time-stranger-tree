@@ -4,19 +4,15 @@
   gap: 8px;
 }
 
+/* extends the global `.label` utility */
 .groupLabel {
-  font-family: var(--font-display);
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-dim);
   margin-top: 4px;
 }
 
 .skill {
   padding: 6px 8px;
   background: var(--surface-2);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .head {
@@ -32,7 +28,7 @@
 
 .element {
   font-size: 10.5px;
-  color: var(--accent-2);
+  color: var(--accent);
 }
 
 .level {

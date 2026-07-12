@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { appData } from '../data/appData';
-import { iconUrl } from '../data/load';
 import { search } from '../data/search';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
+import { MonRow } from '../ui/MonRow';
+import { useSearchNav } from './useSearchNav';
 import styles from './SearchBox.module.css';
 
 export function SearchBox() {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const select = useStore((s) => s.select);
   const setFocus = useStore((s) => s.setFocus);
@@ -38,28 +38,13 @@ export function SearchBox() {
     inputRef.current?.blur();
   };
 
-  const onKeyDown = (event: React.KeyboardEvent) => {
-    if (!hits.length) {
-      if (event.key === 'Escape') {
-        setOpen(false);
-        inputRef.current?.blur();
-      }
-      return;
-    }
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      setHighlighted((h) => Math.min(h + 1, hits.length - 1));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setHighlighted((h) => Math.max(h - 1, 0));
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      pick(hits[highlighted].slug, event.shiftKey); // Shift+Enter = focus lineage
-    } else if (event.key === 'Escape') {
+  const { highlighted, setHighlighted, onKeyDown } = useSearchNav(hits, {
+    onPick: (hit, shiftKey) => pick(hit.slug, shiftKey), // Shift+Enter = focus lineage
+    onClose: () => {
       setOpen(false);
       inputRef.current?.blur();
-    }
-  };
+    },
+  });
 
   return (
     <div className={styles.wrap}>
@@ -78,29 +63,39 @@ export function SearchBox() {
         onKeyDown={onKeyDown}
         spellCheck={false}
       />
+      {open && query.trim() !== '' && hits.length === 0 && (
+        <div className={styles.dropdown}>
+          <div className={styles.noResults}>No Digimon match “{query.trim()}”.</div>
+        </div>
+      )}
       {open && hits.length > 0 && (
         <div className={styles.dropdown}>
           {hits.map((hit, i) => {
             const d = appData().db.digimon[hit.slug];
             return (
-              <button
+              <MonRow
                 key={hit.slug}
-                className={i === highlighted ? styles.hitActive : styles.hit}
+                slug={hit.slug}
+                size={24}
+                active={i === highlighted}
                 onMouseEnter={() => setHighlighted(i)}
                 onMouseDown={(e) => {
                   e.preventDefault();
                   pick(hit.slug, e.shiftKey);
                 }}
-              >
-                <img src={iconUrl(hit.slug)} alt="" width={24} height={24} loading="lazy" />
-                <span className={styles.hitName}>{d.name}</span>
-                <span
-                  className={styles.attrDot}
-                  style={{ background: ATTRIBUTE_COLORS[d.attribute] }}
-                  title={d.attribute}
-                />
-                <span className={styles.hitGen}>{d.generation}</span>
-              </button>
+                meta={
+                  <>
+                    <span
+                      className={styles.attrDot}
+                      style={{ background: ATTRIBUTE_COLORS[d.attribute] }}
+                      title={d.attribute}
+                      role="img"
+                      aria-label={d.attribute}
+                    />
+                    {d.generation}
+                  </>
+                }
+              />
             );
           })}
           <div className={styles.hint}>Enter: select · Shift+Enter: focus lineage</div>

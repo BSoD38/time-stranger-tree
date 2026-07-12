@@ -8,15 +8,19 @@ function cellClass(multiplier: ResistanceMultiplier): string {
   return styles.weak;
 }
 
+// Marker + number + colour: three redundant channels so resistance never rides
+// on colour alone.
 function label(multiplier: ResistanceMultiplier): string {
-  if (multiplier === 0) return 'IMM';
+  if (multiplier === 0) return '⊘ IMM';
+  if (multiplier < 1) return `▼ ×${multiplier}`; // resists
+  if (multiplier > 1) return `▲ ×${multiplier}`; // weak to
   return `×${multiplier}`;
 }
 
 export function ResistanceGrid({ digimon }: { digimon: Digimon }) {
   return (
     <div className={styles.wrap}>
-      <div className={styles.groupLabel}>Attribute</div>
+      <div className="label">Attribute</div>
       <div className={styles.grid}>
         {ATTRIBUTE_KEYS.map((key) => (
           <div key={key} className={`${styles.cell} ${cellClass(digimon.attributeResistances[key])}`}>
@@ -25,7 +29,7 @@ export function ResistanceGrid({ digimon }: { digimon: Digimon }) {
           </div>
         ))}
       </div>
-      <div className={styles.groupLabel}>Elemental</div>
+      <div className="label">Elemental</div>
       <div className={styles.grid}>
         {ELEMENT_KEYS.map((key) => (
           <div key={key} className={`${styles.cell} ${cellClass(digimon.elementalResistances[key])}`}>

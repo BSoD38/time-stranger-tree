@@ -26,11 +26,13 @@ automatically.
 
 - **Click** a Digimon: detail panel + soft lineage highlight. **Double-click / F**: isolate its full lineage (Esc or browser Back exits).
 - **/** or **Ctrl+K**: search (Enter selects, Shift+Enter focuses the lineage).
+- **Generation rail** (top of canvas): jump the viewport to any generation column; a live indicator tracks where you are.
 - **Filters**: dim by generation, attribute, ridable/item/jogress/bond.
 - **Route**: pick From/To → step-by-step evolution plan with every requirement
   (stats, items, Jogress partners), de-digivolve steps included; up to 3
   alternative routes. Deep-linkable: `#/d/{slug}`, `#/f/{slug}`,
   `#/route/{from}/{to}`.
+- **☾/☀** toggles the light/dark chrome theme (the graph viewport stays dark in both).
 
 ## Architecture notes
 
@@ -44,3 +46,35 @@ automatically.
 - The pure data layer (`src/data/`) has zero runtime dependencies and full
   vitest coverage, including a data-invariants suite that gates future
   scraper re-drops.
+
+## Design system
+
+**Colour comes from the Digimon, not the chrome.** The neutrals are a quiet warm
+graphite/off-white stage (near-zero chroma, OKLCH); the accent is repainted with
+the *selected* sprite's own signature hue, so the whole UI shifts as you explore.
+One humanist family (Hanken Grotesk) carries everything, hierarchy by weight.
+
+- **Chromatic engine** — `scripts/sync-data.mjs` extracts each sprite's dominant
+  OKLCH hue+chroma at data-sync time (defeating the icons' chromatic-aberration
+  glitch with a pre-blur) into `src/generated/colors.json`. At runtime
+  `src/theme/chroma.ts` + `useChromaticAccent` set `--accent-h` / `--accent-c`
+  on selection; the theme owns `--accent-l`, so the accent reads in both themes.
+  The Cytoscape selection glow uses each node's `data(accent)` hex.
+- **Themes** — `src/theme/theme.ts` toggles a `data-theme` attribute on `<html>`
+  (persisted, system-default, anti-flash inline script in `index.html`).
+  `tokens.css` overrides neutrals/accents on `[data-theme='light']`. The graph
+  canvas keeps a fixed dark `--graph-bg` viewport in **both** themes so sprites
+  and their glow always lead.
+- **Tokens** — `src/theme/tokens.css` (`:root`). OKLCH neutrals + accent ramp,
+  `--radius-*`, `--z-*`, `--shadow-dropdown|panel`, `--transition|-fast`, and one
+  global `:focus-visible` ring. Prefer a token over a literal value. Attribute
+  colours live in `src/theme/attribute.ts` (Cytoscape needs them in JS; injected
+  as `--attr-*` on boot) — retuned for mutual separation, and never the *sole*
+  channel (legend names, resistance markers, panel labels back them up).
+- **`.label`** — global utility for the uppercase font-display group label.
+  Apply as `className={\`label ${styles.x}\`}`; put only deltas in the module.
+- **Primitives** — `src/ui/`. Presentational, prop-driven, no store coupling:
+  - `MonRow` — the canonical "pick a Digimon" row (`inline` / `active` /
+    `borderColor` variants; container may set `--row-hover`).
+  - `SegButton` — segmented toolbar/action toggle (`size` `sm` | `md`).
+  - `Panel` / `CloseButton`, `Chip`, `Collapse`, `BrandMark`, `ThemeToggle`.

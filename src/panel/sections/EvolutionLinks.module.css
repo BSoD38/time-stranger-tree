@@ -5,49 +5,25 @@
   margin: 0 16px 12px;
 }
 
+/* extends the global `.label` utility */
 .label {
-  font-family: var(--font-display);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--text-dim);
   margin-bottom: 4px;
 }
 
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 3px 6px;
-  background: none;
-  border: none;
-  border-radius: 6px;
-  color: var(--text);
-  font-size: 12.5px;
-  text-align: left;
+/* explicit "mode change" (reciprocal / switchable form) marker in the sub-line */
+.modeChange {
+  color: var(--accent);
+  font-weight: 700;
 }
 
-.row:hover {
+/* base-personality tag on each evolution link */
+.persona {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
-}
-
-.row img {
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.meta {
-  margin-left: auto;
+  border: 1px solid var(--border);
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: 10px;
+  font-weight: 600;
   white-space: nowrap;
-  font-variant-numeric: tabular-nums;
 }

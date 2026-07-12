@@ -5,15 +5,17 @@ import { useStore } from '../state/store';
 import { registerCy, unregisterCy } from './cyInstance';
 import { buildElements } from './elements';
 import { buildStylesheet } from './stylesheet';
+import { resetView } from './viewport';
 import { useGraphController } from './controllers/useGraphController';
 
 export function GraphCanvas() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const orientation = useStore.getState().orientation;
     const cy = cytoscape({
       container: ref.current!,
-      elements: buildElements(appData()),
+      elements: buildElements(appData(), orientation),
       style: buildStylesheet() as never,
       layout: { name: 'preset' },
       autoungrabify: true,
@@ -21,23 +23,17 @@ export function GraphCanvas() {
       boxSelectionEnabled: false,
       minZoom: 0.03,
       maxZoom: 3,
-      // renderer perf options
-      hideEdgesOnViewport: true,
+      // renderer perf options — keep edges drawn while panning so the lineage
+      // links never vanish mid-gesture (worth the redraw cost at this graph size)
+      hideEdgesOnViewport: false,
       textureOnViewport: false,
       motionBlur: false,
       pixelRatio: 'auto',
     } as cytoscape.CytoscapeOptions);
 
-    // initial viewport: a readable slab of the graph's top rather than a
-    // fit-all sliver (the canvas is ~2.8k x ~14.7k)
-    const { bounds } = appData().layout;
-    const initialZoom = 0.3;
-    cy.zoom(initialZoom);
-    cy.center();
-    cy.pan({
-      x: cy.pan().x,
-      y: -bounds.minY * initialZoom + 80,
-    });
+    // initial viewport: a readable slab at the In-Training end rather than a
+    // fit-all sliver (orientation-aware — the long axis flips with it)
+    resetView(cy, orientation);
     registerCy(cy);
 
     let lastTap = { id: '', time: 0 };

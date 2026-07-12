@@ -80,12 +80,10 @@ async function main() {
     if (!byPartition.has(p)) byPartition.set(p, []);
     byPartition.get(p).push(d.slug);
   }
-  let maxY = 0;
   for (const [p, slugs] of byPartition) {
     slugs.sort((a, b) => elkPos.get(a).y - elkPos.get(b).y || a.localeCompare(b));
     slugs.forEach((slug, i) => {
       positions[slug] = { x: p * COLUMN_PITCH, y: Math.round(i * NODE_PITCH) };
-      maxY = Math.max(maxY, i * NODE_PITCH);
     });
   }
 
@@ -118,28 +116,49 @@ async function main() {
     componentCount += 1;
   }
 
-  // depth = longest internal path from a component entry (visited-guarded — 2-cycles exist)
-  const depth = new Map();
-  const entryOf = (slug) =>
-    hybrids.find((h) => h.slug === slug).evolvesFrom.every((f) => !hybridSlugs.has(f));
-  for (const d of hybrids) if (entryOf(d.slug)) depth.set(d.slug, 0);
-  for (const d of hybrids) if (!depth.has(d.slug)) depth.set(d.slug, 0); // isolated fallback
+  // depth = fusion level (Spirit forms = 0, deeper fusions increase), laid out in
+  // columns. The Spirit graph has mode-change 2-cycles (Human <-> Beast spirit,
+  // etc.); a naive longest-path relaxation runs away on those, so strip the
+  // reciprocal edges to a DAG, longest-path on that, then snap each mode-change
+  // pair to their shared max depth so partners sit in the same column.
+  const isModeChange = (from, to) => (internalOut.get(to) ?? []).includes(from);
+  const dagOut = new Map(
+    hybrids.map((d) => [
+      d.slug,
+      (internalOut.get(d.slug) ?? []).filter((to) => !isModeChange(d.slug, to)),
+    ]),
+  );
+  const depth = new Map(hybrids.map((d) => [d.slug, 0]));
   for (let pass = 0; pass < hybrids.length; pass++) {
     let changed = false;
-    for (const [from, tos] of internalOut) {
+    for (const [from, tos] of dagOut) {
       for (const to of tos) {
-        const nd = depth.get(from) + 1;
-        if (nd > depth.get(to) && nd < hybrids.length) {
-          depth.set(to, nd);
+        if (depth.get(from) + 1 > depth.get(to)) {
+          depth.set(to, depth.get(from) + 1);
           changed = true;
         }
       }
     }
     if (!changed) break;
   }
+  for (const [from, tos] of internalOut) {
+    for (const to of tos) {
+      if (isModeChange(from, to)) {
+        const shared = Math.max(depth.get(from), depth.get(to));
+        depth.set(from, shared);
+        depth.set(to, shared);
+      }
+    }
+  }
 
-  const laneY = maxY + LANE_GAP;
-  const laneStartX = PARTITIONS['Champion'] * COLUMN_PITCH;
+  // Hybrid is a self-contained Spirit-evolution cluster with no edges to the main
+  // ladder. Lay it out AFTER Mega + along the generation axis (a clear gap past the
+  // last column) and top-aligned along the digimon axis, so it reads as "the section
+  // after Mega +" in either orientation — to the right in columns, below in rows —
+  // instead of floating mid-graph.
+  const maxPartition = Math.max(...Object.values(PARTITIONS));
+  const laneStartX = (maxPartition + 1) * COLUMN_PITCH + LANE_GAP;
+  const laneTopY = 0;
   const laneRowPitch = NODE_PITCH;
   const byComponent = new Map();
   for (const d of hybrids) {
@@ -148,7 +167,7 @@ async function main() {
     byComponent.get(c).push(d);
   }
   // components stack sequentially so families can never collide
-  let baseY = laneY;
+  let baseY = laneTopY;
   for (const [, members] of [...byComponent.entries()].sort((a, b) => a[0] - b[0])) {
     const stacks = new Map(); // depth → occupied rows in this family
     let maxStack = 0;
@@ -181,7 +200,7 @@ async function main() {
     meta: { dataScrapedAt: db.meta.scrapedAt, nodeCount: all.length, edgeCount: edges.length },
     bounds,
     columns,
-    hybridLane: { y: laneY, x: laneStartX, label: 'Hybrid (Spirit)' },
+    hybridLane: { y: laneTopY, x: laneStartX, label: 'Hybrid (Spirit)' },
     positions,
   };
   await mkdir(path.join(ROOT, 'src', 'generated'), { recursive: true });

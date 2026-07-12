@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { appData } from '../data/appData';
-import { iconUrl } from '../data/load';
+import { thumbUrl } from '../data/load';
 import { search } from '../data/search';
 import { summarizeRoute } from '../data/summary';
 import { useStore } from '../state/store';
 import { exitRoute } from '../state/urlSync';
+import { useSearchNav } from '../search/useSearchNav';
 import { Chip } from '../ui/Chip';
+import { MonRow } from '../ui/MonRow';
+import { Panel, CloseButton } from '../ui/Panel';
 import { THEME } from '../theme/attribute';
 import { RouteStepCard } from './RouteStep';
 import styles from './RoutePlanner.module.css';
@@ -21,16 +24,26 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
   const hits = open && query ? search(appData().searchIndex, query, 6) : [];
   const digimon = value ? appData().db.digimon[value] : null;
 
+  const pick = (slug: string) => {
+    setRouteEndpoint(which, slug);
+    setQuery('');
+    setOpen(false);
+  };
+  const { highlighted, setHighlighted, onKeyDown } = useSearchNav(hits, {
+    onPick: (hit) => pick(hit.slug),
+    onClose: () => setOpen(false),
+  });
+
   return (
     <div className={styles.endpoint}>
-      <span className={styles.endpointLabel}>{which === 'from' ? 'From' : 'To'}</span>
+      <span className={`label ${styles.endpointLabel}`}>{which === 'from' ? 'From' : 'To'}</span>
       {digimon ? (
         <button
           className={styles.endpointValue}
           onClick={() => setRouteEndpoint(which, null)}
           title="Clear"
         >
-          <img src={iconUrl(digimon.slug)} alt="" width={22} height={22} />
+          <img src={thumbUrl(digimon.slug)} alt="" width={22} height={22} />
           {digimon.name} ✕
         </button>
       ) : (
@@ -41,9 +54,11 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
             onChange={(e) => {
               setQuery(e.target.value);
               setOpen(true);
+              setHighlighted(0);
             }}
             onFocus={() => setOpen(true)}
             onBlur={() => setTimeout(() => setOpen(false), 150)}
+            onKeyDown={onKeyDown}
             spellCheck={false}
           />
           {selected && selected !== value && (
@@ -59,19 +74,18 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
           )}
           {hits.length > 0 && (
             <div className={styles.endpointDropdown}>
-              {hits.map((hit) => (
-                <button
+              {hits.map((hit, i) => (
+                <MonRow
                   key={hit.slug}
+                  slug={hit.slug}
+                  size={20}
+                  active={i === highlighted}
+                  onMouseEnter={() => setHighlighted(i)}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    setRouteEndpoint(which, hit.slug);
-                    setQuery('');
-                    setOpen(false);
+                    pick(hit.slug);
                   }}
-                >
-                  <img src={iconUrl(hit.slug)} alt="" width={20} height={20} />
-                  {appData().db.digimon[hit.slug].name}
-                </button>
+                />
               ))}
             </div>
           )}
@@ -92,12 +106,10 @@ export function RoutePlanner() {
   const summary = active && active.steps.length ? summarizeRoute(active.steps) : null;
 
   return (
-    <aside className={styles.panel}>
+    <Panel>
       <header className={styles.header}>
         <h2>Route Planner</h2>
-        <button className={styles.close} onClick={exitRoute} title="Close (Esc)">
-          ✕
-        </button>
+        <CloseButton onClick={exitRoute} title="Close (Esc)" />
       </header>
 
       <div className={styles.inputs}>
@@ -199,6 +211,6 @@ export function RoutePlanner() {
           </>
         )}
       </div>
-    </aside>
+    </Panel>
   );
 }

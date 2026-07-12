@@ -28,10 +28,12 @@ export function FilterBar() {
   return (
     <div className={styles.bar}>
       <div className={styles.group}>
+        <span className={`label ${styles.groupLabel}`}>Gen</span>
         {GENERATION_KEYS.map((generation) => (
           <button
             key={generation}
             className={generations.has(generation) ? styles.chipActive : styles.chip}
+            aria-pressed={generations.has(generation)}
             onClick={() => toggleGeneration(generation)}
           >
             {generation}
@@ -39,11 +41,13 @@ export function FilterBar() {
         ))}
       </div>
       <div className={styles.group}>
+        <span className={`label ${styles.groupLabel}`}>Attribute</span>
         {ATTRIBUTE_KEYS.map((attribute) => (
           <button
             key={attribute}
             className={attributes.has(attribute) ? styles.chipActive : styles.chip}
             style={{ '--chip-color': ATTRIBUTE_COLORS[attribute] } as React.CSSProperties}
+            aria-pressed={attributes.has(attribute)}
             onClick={() => toggleAttribute(attribute)}
           >
             {attribute}
@@ -51,11 +55,13 @@ export function FilterBar() {
         ))}
       </div>
       <div className={styles.group}>
+        <span className={`label ${styles.groupLabel}`}>Trait</span>
         {SPECIAL.map(({ key, label, title }) => (
           <button
             key={key}
             className={special.has(key) ? styles.chipActive : styles.chip}
             title={title}
+            aria-pressed={special.has(key)}
             onClick={() => toggleSpecial(key)}
           >
             {label}

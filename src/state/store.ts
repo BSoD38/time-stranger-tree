@@ -1,9 +1,44 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { appData } from '../data/appData';
+import type { Orientation } from '../graph/orient';
 import { findRoutes, type Route } from '../data/route';
 import type { Attribute, Generation } from '../data/schema';
 import type { SpecialFacet } from '../data/search';
+
+// Display preferences persist across sessions (localStorage). Orientation
+// defaults to rows — the many-members-per-stage spread reads best sideways;
+// portrait screens can switch to columns. Focus defaults to hiding the rest of
+// the graph so the focused lineage / route stands alone.
+const PREFS_KEY = 'tst:prefs';
+interface Prefs {
+  orientation: Orientation;
+  hideOthers: boolean;
+}
+const DEFAULT_PREFS: Prefs = { orientation: 'rows', hideOthers: true };
+
+function loadPrefs(): Prefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return DEFAULT_PREFS;
+    const p = JSON.parse(raw) as Partial<Prefs> & { focusHides?: boolean };
+    return {
+      orientation: p.orientation === 'columns' ? 'columns' : 'rows',
+      // `focusHides` is the pre-generalisation key — read it as a fallback
+      hideOthers: (p.hideOthers ?? p.focusHides) !== false,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+function savePrefs(prefs: Prefs): void {
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    /* private mode / disabled storage — preference just won't persist */
+  }
+}
 
 export interface RouteState {
   from: string | null;
@@ -33,10 +68,17 @@ export interface AppState {
   filtersOpen: boolean;
   route: RouteState;
   routeOpen: boolean;
+  orientation: Orientation;
+  /** Isolate mode: hide (vs dim) everything outside the focused lineage / route. */
+  hideOthers: boolean;
+  settingsOpen: boolean;
 
   setReady(): void;
   select(slug: string | null): void;
   setFocus(slug: string | null): void;
+  setOrientation(value: Orientation): void;
+  setHideOthers(value: boolean): void;
+  setSettingsOpen(open: boolean): void;
   toggleGeneration(value: Generation): void;
   toggleAttribute(value: Attribute): void;
   toggleSpecial(value: SpecialFacet): void;
@@ -77,10 +119,25 @@ export const useStore = create<AppState>()(
     filtersOpen: false,
     route: emptyRoute,
     routeOpen: false,
+    ...loadPrefs(),
+    settingsOpen: false,
 
     setReady: () => set({ ready: true }),
     select: (slug) => set({ selected: slug }),
-    setFocus: (slug) => set({ focus: slug }),
+    // Focus and the route planner are mutually exclusive views (as the URL model
+    // already assumes): a route can devolve out of a lineage, which can't be shown
+    // inside a focus that isolates — and compacts — only that lineage. Entering
+    // focus closes any open route.
+    setFocus: (slug) => set(slug ? { focus: slug, routeOpen: false } : { focus: null }),
+    setOrientation: (value) => {
+      set({ orientation: value });
+      savePrefs({ orientation: value, hideOthers: get().hideOthers });
+    },
+    setHideOthers: (value) => {
+      set({ hideOthers: value });
+      savePrefs({ orientation: get().orientation, hideOthers: value });
+    },
+    setSettingsOpen: (open) => set({ settingsOpen: open }),
     toggleGeneration: (value) => set({ generations: toggled(get().generations, value) }),
     toggleAttribute: (value) => set({ attributes: toggled(get().attributes, value) }),
     toggleSpecial: (value) => set({ special: toggled(get().special, value) }),
@@ -91,6 +148,7 @@ export const useStore = create<AppState>()(
     openRoute: (partial) =>
       set({
         routeOpen: true,
+        focus: null, // route and focus are mutually exclusive (see setFocus)
         route: computeRoutes({ ...get().route, ...partial }),
       }),
     closeRoute: () => set({ routeOpen: false }),

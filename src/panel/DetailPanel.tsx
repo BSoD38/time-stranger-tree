@@ -5,6 +5,8 @@ import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
 import { Chip } from '../ui/Chip';
 import { Collapse } from '../ui/Collapse';
+import { Panel, CloseButton } from '../ui/Panel';
+import { SegButton } from '../ui/SegButton';
 import { ConditionCard } from './sections/ConditionCard';
 import { DialogueBlock } from './sections/DialogueBlock';
 import { EvolutionLinks } from './sections/EvolutionLinks';
@@ -25,7 +27,7 @@ export function DetailPanel({ slug }: { slug: string }) {
   useEffect(() => setDescExpanded(false), [slug]);
 
   return (
-    <aside className={styles.panel}>
+    <Panel>
       <header className={styles.header}>
         <img
           className={styles.icon}
@@ -47,25 +49,24 @@ export function DetailPanel({ slug }: { slug: string }) {
             {digimon.ridable && <Chip title="Ridable">🐎 Ridable</Chip>}
           </div>
         </div>
-        <button className={styles.close} onClick={() => select(null)} title="Close (Esc)">
-          ✕
-        </button>
+        <CloseButton onClick={() => select(null)} title="Close (Esc)" />
       </header>
 
       <div className={styles.actions}>
-        <button
-          className={focus === slug ? styles.actionActive : styles.action}
+        <SegButton
+          size="sm"
+          active={focus === slug}
           onClick={() => setFocus(focus === slug ? null : slug)}
           title="Isolate this Digimon's full lineage (F)"
         >
           ◈ {focus === slug ? 'Unfocus' : 'Focus lineage'}
-        </button>
-        <button className={styles.action} onClick={() => openRoute({ from: slug })}>
+        </SegButton>
+        <SegButton size="sm" onClick={() => openRoute({ from: slug })}>
           Route from
-        </button>
-        <button className={styles.action} onClick={() => openRoute({ to: slug })}>
+        </SegButton>
+        <SegButton size="sm" onClick={() => openRoute({ to: slug })}>
           Route to
-        </button>
+        </SegButton>
       </div>
 
       <div className={styles.scroll}>
@@ -101,6 +102,6 @@ export function DetailPanel({ slug }: { slug: string }) {
           Traits: {digimon.traits.join(', ') || '—'} · Base personality: {digimon.basePersonality}
         </div>
       </div>
-    </aside>
+    </Panel>
   );
 }

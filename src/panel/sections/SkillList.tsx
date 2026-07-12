@@ -22,7 +22,7 @@ export function SkillList({ digimon }: { digimon: Digimon }) {
     <div className={styles.wrap}>
       {digimon.specialSkills.length > 0 && (
         <>
-          <div className={styles.groupLabel}>Special skills</div>
+          <div className={`label ${styles.groupLabel}`}>Special skills</div>
           {digimon.specialSkills.map((skill) => (
             <SkillRow key={skill.slug} skill={skill} />
           ))}
@@ -30,7 +30,7 @@ export function SkillList({ digimon }: { digimon: Digimon }) {
       )}
       {digimon.attachmentSkills.length > 0 && (
         <>
-          <div className={styles.groupLabel}>Attachment skills</div>
+          <div className={`label ${styles.groupLabel}`}>Attachment skills</div>
           {digimon.attachmentSkills.map((skill: AttachmentSkill) => (
             <SkillRow key={skill.slug} skill={skill} level={skill.level} />
           ))}

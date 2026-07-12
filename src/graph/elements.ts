@@ -4,6 +4,8 @@ import { thumbUrl } from '../data/load';
 import { classifyForwardEdge, type ForwardStepClass } from '../data/route';
 import { edgeKey } from '../data/graph';
 import type { Generation } from '../data/schema';
+import { nodeAccentHex } from '../theme/chroma';
+import { genLabelPos, orient, type Orientation } from './orient';
 
 // Tier index used to detect tier-skip edges (rendered as arcs so they don't
 // shoot straight through intermediate columns). Mirrors the layout script.
@@ -21,40 +23,48 @@ const TIER: Partial<Record<Generation, number>> = {
 const attrClass = (attribute: string): string =>
   `attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;
 
-export function buildElements(data: AppData): ElementDefinition[] {
+export function buildElements(data: AppData, orientation: Orientation): ElementDefinition[] {
   const { graph, layout } = data;
   const elements: ElementDefinition[] = [];
+  // `bx`/`by` carry the base (column-frame) coordinates so orientation can be
+  // re-applied live without recomputing anything (see reorientGraph).
+  const labelClass = orientation === 'rows' ? 'col-label label-rows' : 'col-label';
 
   for (const slug of graph.slugs) {
     const d = graph.db.digimon[slug];
     const classes = [attrClass(d.attribute)];
     if (d.generation === 'Armor') classes.push('gen-armor');
     if (d.generation === 'Hybrid') classes.push('gen-hybrid');
+    const base = layout.positions[slug];
     elements.push({
       group: 'nodes',
-      data: { id: slug, name: d.name, thumb: thumbUrl(slug) },
-      position: { ...layout.positions[slug] },
+      data: { id: slug, name: d.name, thumb: thumbUrl(slug), accent: nodeAccentHex(slug), bx: base.x, by: base.y },
+      position: orient(base, orientation),
       classes: classes.join(' '),
     });
   }
 
-  // floating generation column headers + hybrid lane label (non-interactive)
-  layout.columns.forEach((column, i) => {
+  // floating generation headers + hybrid section label (non-interactive).
+  // `bx`/`by` here are the label's chosen base position for the current
+  // orientation, kept for reorientGraph to re-place them.
+  const labels: Array<{ id: string; name: string; gen: number }> = [
+    ...layout.columns.map((column, i) => ({
+      id: `__col-${i}`,
+      name: column.generations.join(' / '),
+      gen: column.x,
+    })),
+    { id: '__col-hybrid', name: layout.hybridLane.label, gen: layout.hybridLane.x },
+  ];
+  for (const { id, name, gen } of labels) {
+    const pos = genLabelPos(gen, orientation);
     elements.push({
       group: 'nodes',
-      data: { id: `__col-${i}`, name: column.generations.join(' / ') },
-      position: { x: column.x, y: -170 },
-      classes: 'col-label',
+      data: { id, name, bx: pos.x, by: pos.y, gen },
+      position: pos,
+      classes: labelClass,
       selectable: false,
     });
-  });
-  elements.push({
-    group: 'nodes',
-    data: { id: '__col-hybrid', name: layout.hybridLane.label },
-    position: { x: layout.hybridLane.x, y: layout.hybridLane.y - 140 },
-    classes: 'col-label',
-    selectable: false,
-  });
+  }
 
   for (const from of graph.slugs) {
     for (const to of graph.out.get(from) ?? []) {

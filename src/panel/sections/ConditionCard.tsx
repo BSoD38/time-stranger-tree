@@ -1,7 +1,7 @@
-import { iconUrl } from '../../data/load';
 import type { EvolutionCondition } from '../../data/schema';
 import { useStore } from '../../state/store';
 import { Chip } from '../../ui/Chip';
+import { MonRow } from '../../ui/MonRow';
 import { THEME } from '../../theme/attribute';
 import styles from './ConditionCard.module.css';
 
@@ -15,7 +15,7 @@ export function ConditionCard({ condition }: ConditionCardProps) {
 
   return (
     <div className={styles.card}>
-      <div className={styles.title}>How to obtain</div>
+      <div className={`label ${styles.title}`}>How to obtain</div>
       <div className={styles.pills}>
         <Chip>Rank ≥ {condition.agentRank.value}</Chip>
         {Object.entries(condition.stats ?? {}).map(([stat, threshold]) => (
@@ -37,18 +37,17 @@ export function ConditionCard({ condition }: ConditionCardProps) {
       </div>
       {condition.jogressPartners && (
         <div className={styles.partners}>
-          <div className={styles.partnerLabel}>Jogress with</div>
+          <div className={`label ${styles.partnerLabel}`}>Jogress with</div>
           {condition.jogressPartners.map((partner) => (
-            <button
+            <MonRow
               key={partner.slug}
-              className={styles.partner}
+              slug={partner.slug}
+              name={partner.name}
+              meta={partner.personality}
+              borderColor={THEME.jogress}
               onClick={() => select(partner.slug)}
               title={`${partner.name} — must also be raised`}
-            >
-              <img src={iconUrl(partner.slug)} alt="" width={28} height={28} loading="lazy" />
-              <span>{partner.name}</span>
-              <span className={styles.personality}>{partner.personality}</span>
-            </button>
+            />
           ))}
         </div>
       )}

@@ -9,7 +9,9 @@ export function DialogueBlock({ lines, name }: { lines: DialogueLine[]; name: st
           key={i}
           className={line.speaker === 'digimon' ? styles.digimon : styles.player}
         >
-          <span className={styles.speaker}>{line.speaker === 'digimon' ? name : 'You'}</span>
+          <span className={`label ${styles.speaker}`}>
+            {line.speaker === 'digimon' ? name : 'You'}
+          </span>
           {line.text}
         </div>
       ))}

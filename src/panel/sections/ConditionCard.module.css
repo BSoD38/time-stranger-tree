@@ -6,12 +6,10 @@
   border-radius: var(--radius);
 }
 
+/* extends the global `.label` utility — accented section heading */
 .title {
-  font-family: var(--font-display);
   font-size: 12px;
-  font-weight: 600;
   letter-spacing: 0.6px;
-  text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 8px;
 }
@@ -29,38 +27,9 @@
   gap: 6px;
 }
 
+/* extends the global `.label` utility */
 .partnerLabel {
-  font-size: 11px;
   color: var(--jogress);
-  font-family: var(--font-display);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.partner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
-  background: var(--surface);
-  border: 1px solid var(--jogress);
-  border-radius: var(--radius);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.partner:hover {
-  background: var(--border);
-}
-
-.partner img {
-  border-radius: 4px;
-}
-
-.personality {
-  margin-left: auto;
-  color: var(--text-dim);
-  font-size: 11px;
 }
 
 .caption {

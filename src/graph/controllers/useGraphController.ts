@@ -1,12 +1,38 @@
 import { useEffect } from 'react';
 import { appData } from '../../data/appData';
-import { edgeKey, lineage } from '../../data/graph';
+import { descendants, edgeKey, lineage } from '../../data/graph';
 import { filterSlugs, hasActiveCriteria } from '../../data/search';
 import { useStore, type AppState } from '../../state/store';
 import { getCy } from '../cyInstance';
+import { compactFocus, reorientGraph, resetView } from '../viewport';
+import type { Core } from 'cytoscape';
 
 const APPEARANCE_CLASSES =
-  'sel dim-soft dim-hard dim-filter lineage-glow route-dim route-glow route-glow-devolve route-node route-step-active';
+  'sel dim-soft dim-hard dim-filter hidden lineage-next lineage-prev lineage-prev-thin route-dim route-glow route-glow-devolve route-node route-step-active';
+
+/**
+ * Highlight the lineage of `anchor`: nodes/edges outside it get `outsideClass`
+ * (hidden / dim-hard / dim-soft), while edges inside are coloured by direction —
+ * `lineage-next` for edges leading away from the anchor toward its descendants
+ * (evolves-to), `lineage-prev` for edges from its ancestors (evolves-from).
+ */
+function paintLineage(cy: Core, anchor: string, outsideClass: string, thinPrev = false): void {
+  const graph = appData().graph;
+  const lin = lineage(graph, anchor);
+  const forward = descendants(graph, anchor); // reachable via evolves-to
+  cy.nodes().forEach((n) => {
+    if (!lin.nodes.has(n.id())) n.addClass(outsideClass);
+  });
+  cy.edges().forEach((e) => {
+    const source = e.source().id();
+    if (!lin.nodes.has(source) || !lin.nodes.has(e.target().id())) {
+      e.addClass(outsideClass);
+      return;
+    }
+    if (source === anchor || forward.has(source)) e.addClass('lineage-next');
+    else e.addClass(thinPrev ? 'lineage-prev lineage-prev-thin' : 'lineage-prev');
+  });
+}
 
 /**
  * Single appearance controller: recomputes every class layer in one batch on
@@ -18,32 +44,20 @@ const APPEARANCE_CLASSES =
 function recompute(state: AppState): void {
   const cy = getCy();
   if (!cy) return;
-  const { graph, db } = { graph: appData().graph, db: appData().db };
+  const db = appData().db;
 
   cy.batch(() => {
     cy.elements().removeClass(APPEARANCE_CLASSES);
 
-    // focus layer: hard-dim everything outside the lineage
+    // focus layer: isolate the lineage. `hideOthers` removes everything else
+    // outright (display:none); otherwise it's hard-dimmed to a faint context.
+    // Inside the lineage, edges are coloured by direction relative to the anchor.
     if (state.focus) {
-      const lin = lineage(graph, state.focus);
-      cy.nodes().forEach((n) => {
-        if (!lin.nodes.has(n.id())) n.addClass('dim-hard');
-      });
-      cy.edges().forEach((e) => {
-        if (!lin.nodes.has(e.source().id()) || !lin.nodes.has(e.target().id())) {
-          e.addClass('dim-hard');
-        }
-      });
+      // in the isolated (hide) focus view, de-emphasise the ancestry links a touch
+      paintLineage(cy, state.focus, state.hideOthers ? 'hidden' : 'dim-hard', state.hideOthers);
     } else if (state.selected) {
       // soft lineage highlight only outside focus mode
-      const lin = lineage(graph, state.selected);
-      cy.nodes().forEach((n) => {
-        if (!lin.nodes.has(n.id())) n.addClass('dim-soft');
-      });
-      cy.edges().forEach((e) => {
-        const inside = lin.nodes.has(e.source().id()) && lin.nodes.has(e.target().id());
-        e.addClass(inside ? 'lineage-glow' : 'dim-soft');
-      });
+      paintLineage(cy, state.selected, 'dim-soft');
     }
 
     // filter layer (dim-only; weaker than dim-hard by stylesheet order)
@@ -59,20 +73,22 @@ function recompute(state: AppState): void {
       });
     }
 
-    // route layer: route elements at full strength, everything else dimmer
+    // route layer: route elements at full strength, everything else either
+    // hidden (display:none) or dimmed, per the `hideOthers` preference
     const route = state.routeOpen ? state.route.routes?.[state.route.active] : undefined;
     if (route && route.steps.length) {
-      cy.elements().addClass('route-dim');
+      const outside = state.hideOthers ? 'hidden' : 'route-dim';
+      cy.elements().addClass(outside);
       route.steps.forEach((step, i) => {
         // a dedigivolve step from u to v travels the forward edge v->u
         const id =
           step.kind === 'digivolve' ? edgeKey(step.from, step.to) : edgeKey(step.to, step.from);
         const edge = cy.$id(id);
-        edge.removeClass('route-dim');
+        edge.removeClass(outside);
         edge.addClass(step.kind === 'digivolve' ? 'route-glow' : 'route-glow-devolve');
         if (i === state.route.activeStep) edge.addClass('route-step-active');
-        cy.$id(step.from).removeClass('route-dim').addClass('route-node');
-        cy.$id(step.to).removeClass('route-dim').addClass('route-node');
+        cy.$id(step.from).removeClass(outside).addClass('route-node');
+        cy.$id(step.to).removeClass(outside).addClass('route-node');
       });
     }
 
@@ -80,22 +96,63 @@ function recompute(state: AppState): void {
   });
 }
 
+function fitEles(cy: Core, slugs: Set<string>, padding: number, animate: boolean): void {
+  const eles = cy.nodes().filter((n) => slugs.has(n.id()));
+  if (!eles.length) return;
+  if (animate) cy.animate({ fit: { eles, padding }, duration: 350, easing: 'ease-out-cubic' });
+  else cy.fit(eles, padding);
+}
+
+/**
+ * Position + viewport are a function of orientation × focus × route, so they're
+ * recomputed together whenever any of those change:
+ *   • focused + "hide others" → compact the lineage tight and frame it
+ *   • focused + "dim others"  → lineage in place (full graph), framed
+ *   • route open              → frame the route path
+ *   • otherwise               → anchor the selection, or the opening slab
+ */
+function frameGraph(cy: Core, animate = true): void {
+  const state = useStore.getState();
+  const o = state.orientation;
+  const route = state.routeOpen ? state.route.routes?.[state.route.active] : undefined;
+
+  if (state.focus) {
+    if (state.hideOthers) compactFocus(cy, state.focus, o);
+    else reorientGraph(cy, o);
+    fitEles(cy, lineage(appData().graph, state.focus).nodes, 60, animate);
+    return;
+  }
+
+  reorientGraph(cy, o);
+  if (route && route.steps.length) {
+    fitEles(cy, new Set([route.from, ...route.steps.map((s) => s.to)]), 80, animate);
+    return;
+  }
+  const anchor = state.selected ? cy.$id(state.selected) : null;
+  if (anchor?.length) {
+    cy.animate({ zoom: { level: 0.6, position: anchor.position() }, duration: 350 });
+  } else {
+    resetView(cy, o, animate);
+  }
+}
+
 export function useGraphController(): void {
   useEffect(() => {
     const unsubscribers = [
       // appearance: any of these slices changes → one full recompute
       useStore.subscribe(
-        (s) => [s.selected, s.focus, s.generations, s.attributes, s.special, s.route, s.routeOpen] as const,
+        (s) =>
+          [s.selected, s.focus, s.hideOthers, s.generations, s.attributes, s.special, s.route, s.routeOpen] as const,
         () => recompute(useStore.getState()),
         { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
       ),
 
-      // viewport: pan to new selection
+      // viewport: pan to a new selection (only when not (re)framing for focus)
       useStore.subscribe(
         (s) => s.selected,
         (selected) => {
           const cy = getCy();
-          if (!cy || !selected) return;
+          if (!cy || !selected || useStore.getState().focus) return;
           const node = cy.$id(selected);
           if (!node.length) return;
           const zoom = cy.zoom() < 0.4 ? { level: 0.8, position: node.position() } : undefined;
@@ -103,42 +160,26 @@ export function useGraphController(): void {
         },
       ),
 
-      // viewport: fit the active route's path when it changes
+      // layout + viewport: recompute positions and framing together
       useStore.subscribe(
-        (s) => (s.routeOpen ? s.route.routes?.[s.route.active] : undefined),
-        (route) => {
+        (s) =>
+          [
+            s.focus,
+            s.hideOthers,
+            s.orientation,
+            s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
+          ] as const,
+        () => {
           const cy = getCy();
-          if (!cy || !route || !route.steps.length) return;
-          const slugs = new Set([route.from, ...route.steps.map((s) => s.to)]);
-          const eles = cy.nodes().filter((n) => slugs.has(n.id()));
-          cy.animate({ fit: { eles, padding: 80 }, duration: 350 });
+          if (cy) frameGraph(cy);
         },
-      ),
-
-      // viewport: fit lineage when entering/retargeting focus
-      useStore.subscribe(
-        (s) => s.focus,
-        (focus) => {
-          const cy = getCy();
-          if (!cy) return;
-          if (!focus) {
-            // back to a readable overview around the selection, not a fit-all sliver
-            const selected = useStore.getState().selected;
-            const anchor = selected ? cy.$id(selected) : null;
-            if (anchor?.length) {
-              cy.animate({ zoom: { level: 0.6, position: anchor.position() }, duration: 350 });
-            } else {
-              cy.animate({ zoom: { level: 0.3, position: { x: 1400, y: 1600 } }, duration: 350 });
-            }
-            return;
-          }
-          const lin = lineage(appData().graph, focus);
-          const eles = cy.nodes().filter((n) => lin.nodes.has(n.id()));
-          cy.animate({ fit: { eles, padding: 60 }, duration: 350 });
-        },
+        { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
       ),
     ];
     recompute(useStore.getState());
+    // deep-linked focus is set before we subscribe — frame it once on mount
+    const cy = getCy();
+    if (cy && useStore.getState().focus) frameGraph(cy, false);
     return () => unsubscribers.forEach((u) => u());
   }, []);
 }

@@ -1,9 +1,9 @@
 import { appData } from '../data/appData';
-import { iconUrl } from '../data/load';
 import type { RouteStep } from '../data/route';
 import { useStore } from '../state/store';
 import { THEME } from '../theme/attribute';
 import { Chip } from '../ui/Chip';
+import { MonRow } from '../ui/MonRow';
 import styles from './RouteStep.module.css';
 
 interface RouteStepCardProps {
@@ -27,20 +27,14 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
     >
-      <div className={styles.kind}>
+      <div className={`label ${styles.kind}`}>
         {index + 1}. {isEvolve ? '▲ Digivolve' : '▼ De-Digivolve'}
         {!isEvolve && <span className={styles.always}>always available</span>}
       </div>
       <div className={styles.pair}>
-        <button className={styles.mon} onClick={() => select(step.from)}>
-          <img src={iconUrl(step.from)} alt="" width={30} height={30} />
-          {from.name}
-        </button>
+        <MonRow inline slug={step.from} name={from.name} size={30} onClick={() => select(step.from)} />
         <span className={styles.arrow}>→</span>
-        <button className={styles.mon} onClick={() => select(step.to)}>
-          <img src={iconUrl(step.to)} alt="" width={30} height={30} />
-          {to.name}
-        </button>
+        <MonRow inline slug={step.to} name={to.name} size={30} onClick={() => select(step.to)} />
       </div>
       {isEvolve && requirement && (
         <div className={styles.pills}>
