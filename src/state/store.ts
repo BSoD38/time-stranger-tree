@@ -103,8 +103,10 @@ export interface AppState {
   setReady(): void;
   patchCodex(patch: Partial<CodexState>): void;
   setView(view: AppView): void;
-  /** Codex → Tree: select a Digimon, isolate its lineage, and show the graph. */
-  enterTreeFocused(slug: string): void;
+  /** Codex → Tree: select a Digimon and show it in the graph. Deliberately does
+   *  NOT focus — the detail panel then offers "Focus lineage" so the pick can be
+   *  isolated on demand (rather than arriving pre-focused). */
+  openInTree(slug: string): void;
   select(slug: string | null): void;
   setFocus(slug: string | null): void;
   setOrientation(value: Orientation): void;
@@ -160,8 +162,8 @@ export const useStore = create<AppState>()(
     // graph modes (focus / route) so the URL and the visible view never disagree.
     // `selected` is preserved so returning to the Tree lands where you left it.
     setView: (view) => set(view === 'codex' ? { view, focus: null, routeOpen: false } : { view }),
-    enterTreeFocused: (slug) =>
-      set({ view: 'graph', selected: slug, focus: slug, routeOpen: false }),
+    openInTree: (slug) =>
+      set({ view: 'graph', selected: slug, focus: null, routeOpen: false }),
     select: (slug) => set({ selected: slug }),
     // Focus and the route planner are mutually exclusive views (as the URL model
     // already assumes): a route can devolve out of a lineage, which can't be shown

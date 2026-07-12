@@ -98,7 +98,7 @@ const CodexTableRow = memo(function CodexTableRow({
 });
 
 export function CodexPage() {
-  const enterTreeFocused = useStore((s) => s.enterTreeFocused);
+  const openInTree = useStore((s) => s.openInTree);
   const searchRef = useRef<HTMLInputElement>(null);
   useSearchHotkey(searchRef);
 
@@ -297,7 +297,7 @@ export function CodexPage() {
                 level={level}
                 sortKey={sortKey}
                 fill={r.total[level] / maxima[level]}
-                onOpen={enterTreeFocused}
+                onOpen={openInTree}
               />
             ))}
           </tbody>
