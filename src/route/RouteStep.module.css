@@ -1,0 +1,82 @@
+.card {
+  padding: 8px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+}
+
+.evolve {
+  border-left-color: var(--accent);
+}
+
+.devolve {
+  border-left-color: var(--text-dim);
+}
+
+.active {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-2));
+}
+
+.kind {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 6px;
+}
+
+.evolve .kind {
+  color: var(--accent);
+}
+
+.devolve .kind {
+  color: var(--text-dim);
+}
+
+.always {
+  font-size: 9.5px;
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.pair {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12.5px;
+}
+
+.mon:hover {
+  background: var(--surface);
+}
+
+.mon img {
+  border-radius: 4px;
+}
+
+.arrow {
+  color: var(--text-dim);
+}
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}

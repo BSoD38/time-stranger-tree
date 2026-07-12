@@ -1,0 +1,66 @@
+:root {
+  --bg: #0a0e14;
+  --surface: #111826;
+  --surface-2: #1a2332;
+  --border: #233046;
+  --text: #e6edf3;
+  --text-dim: #8b98a9;
+  --accent: #00e5c3;
+  --accent-2: #3d9aff;
+  --danger: #ff5d5d;
+  --resist: #45d483;
+  --item: #f5a623;
+  --jogress: #e86bff;
+  --bond: #35d5e5;
+
+  --font-display: 'Chakra Petch', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --panel-width: 380px;
+  --topbar-height: 52px;
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 39px, rgba(61, 154, 255, 0.03) 39px 40px),
+    repeating-linear-gradient(90deg, transparent 0 39px, rgba(61, 154, 255, 0.03) 39px 40px),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  margin: 0;
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 5px;
+}
