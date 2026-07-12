@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import styles from './App.module.css';
 import { initAppData } from './data/appData';
 import { loadDatabase, prefetchThumbnails } from './data/load';
@@ -251,6 +252,7 @@ export default function App() {
           {panelContent}
         </PanelHost>
       </div>
+      <SpeedInsights />
     </div>
   );
 }
