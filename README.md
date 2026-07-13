@@ -36,6 +36,12 @@ automatically.
   with dex number, generation, attribute and the seven stats + total (Lv.1/Lv.99).
   Filter by name/number, generation or attribute; click any row to jump into the
   Tree focused on that lineage. Deep-linkable: `#/codex`.
+- **⚙ Settings**: layout orientation (rows/columns), how the rest of the tree
+  behaves under focus/route (hide vs dim), and **Agent Skills** — enter how many
+  "Digivolution of Valor/Amicability/Wisdom/Philanthropy" skills you own and the
+  detail panel + route planner preview the reduced stat requirements (a
+  matching-personality evolution's stats drop 20% per stack, up to 80%; agent
+  rank and Agent-Skill/Jogress conditions are unchanged).
 - **☾/☀** toggles the light/dark chrome theme (the graph viewport stays dark in both).
 
 ## Architecture notes
@@ -84,4 +90,8 @@ One humanist family (Hanken Grotesk) carries everything, hierarchy by weight.
   - `MonRow` — the canonical "pick a Digimon" row (`inline` / `active` /
     `borderColor` variants; container may set `--row-hover`).
   - `SegButton` — segmented toolbar/action toggle (`size` `sm` | `md`).
+  - `StatReqChip` — a `STAT ≥ value` requirement chip; renders `base → reduced`
+    (bond-tinted) when Agent Skills ease it.
+  - `InfoTip` — a `?` help affordance: a native top-layer popover with an
+    optional foot action (used for menus that must clear the panel/bottom sheet).
   - `Panel` / `CloseButton`, `Chip`, `Collapse`, `BrandMark`, `ThemeToggle`.

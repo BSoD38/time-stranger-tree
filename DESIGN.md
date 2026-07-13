@@ -76,6 +76,11 @@ components:
     textColor: "{colors.text}"
     rounded: "{rounded.sm}"
     padding: "4px 8px"
+  stepper:
+    backgroundColor: "{colors.surface-2}"
+    textColor: "{colors.text}"
+    rounded: "{rounded.sm}"
+    padding: "2px"
   panel:
     backgroundColor: "{colors.surface}"
     textColor: "{colors.text}"
@@ -114,7 +119,7 @@ A warm graphite stage at near-zero chroma, lit by one borrowed accent, with a sm
 Domain accents — each names a mechanic and is always paired with a glyph, so the hue is a reinforcement, not the message:
 - **Item** (`oklch(0.76 0.16 58)`, ◆): item-gated evolutions.
 - **Jogress/DNA** (`oklch(0.66 0.19 305)`, ⧉): fusion evolutions and their partners.
-- **Bond** (`oklch(0.74 0.11 215)`, ❖): Agent-Skill / Bond forms.
+- **Bond** (`oklch(0.74 0.11 215)`, ❖): Agent-Skill / Bond forms, and the **Agent-Skill stat-requirement reductions** — the reduced requirement chips, the Settings stack readout, and the evolves-to reduction marker all wear this hue + ❖.
 - **Resist** (`oklch(0.72 0.15 150)`, ▼) and **Danger** (`oklch(0.68 0.19 25)`, ▲): resistance / weakness in the field guide and detail panel.
 
 ### Tertiary
@@ -171,6 +176,8 @@ Flat by default. Depth is built by tonal layering of the neutral ramp (`bg` < `s
 
 **The Flat-Stage Rule.** Surfaces are flat at rest; if something has a drop shadow it must actually float above the page (a dropdown, the panel). Never use shadow as decoration to make a resting card "pop."
 
+**The Top-Layer Popover Rule.** Any menu or tip that overlays the detail panel or the mobile bottom sheet is a native `[popover]` (rendered in the browser's top layer), never an absolutely-positioned dropdown nested in the top bar. A nested dropdown is capped by its ancestor's stacking context — `--z-topbar` (20) sits below `--z-panel` (40), so it paints *behind* the panel on mobile no matter its own z-index; the top layer clears every stacking context. Position it in JS under its trigger and keep the `--shadow-dropdown` + a brief `pop-in`.
+
 ## 5. Components
 
 Components are tactile and confident: solid graphite fills at rest, a wash of the live accent when active, thin borders that warm toward the accent on hover, and a small press response. Every interactive element shares one tokenized `:focus-visible` ring (`2px solid var(--focus-ring)`, `2px` offset).
@@ -185,6 +192,12 @@ Components are tactile and confident: solid graphite fills at rest, a wash of th
 - **Filter chips (`FilterChip`):** pill (`--radius-pill`), transparent at rest, `1px border`, `--text-dim`, `--font-display` 11/600; carry `aria-pressed`. Active = tinted fill (`color-mix … 16%`) + accent-warmed border, text to `--text`. A `--chip-color` variable lets attribute/domain chips tint their own hover/active (attribute chips add a leading rounded swatch). Touch target ≥36px.
 - **Badge chips (`Chip`):** display-only pills, same shape; a `tinted` variant fills at 15% for domain hues (item / jogress / bond), label always `--text` so color is never the sole channel.
 
+### Requirement chips (`StatReqChip`)
+- **Base:** an outlined chip reading `STAT ≥ value`. Agent rank is near-universal, so on the detail card it sits on the *"How to obtain"* title row and beside each evolves-to name — leaving the pill row for the requirements that actually vary (stats, talent, item ◆, bond ❖).
+- **Reduced:** when the player's Agent Skills ease a requirement, the chip tints `--bond` and reads `base → reduced` — the base greyed (`--text-mute`), an arrow carrying the "reduced to" sense, the reduced value bold (`--text`). Both numbers stay visible; the base is never hidden. Tabular figures; each `STAT base → reduced` unit is unbreakable so it never wraps mid-stat. The same read carries into the route steps, the route-summary ceiling, and (compact) the evolves-to sub-line.
+
+**The Both-Numbers Rule.** A value changed by a player setting shows its origin — `base → reduced`, base quiet, result bold — so the arithmetic is visible and the original is never lost.
+
 ### Inputs
 - **Style:** `surface-2` fill, `1px` border, `--radius-sm`; search and endpoint fields.
 - **Focus:** border shifts to `--accent` (plus the global focus ring on keyboard focus). On touch, fields grow to ≥40px min-height and 16px font (stops iOS zoom).
@@ -193,8 +206,16 @@ Components are tactile and confident: solid graphite fills at rest, a wash of th
 - **Style:** a native `<input>` wrapped in a `<label>` (full semantics/keyboard), with the visible 16px box drawn as a sibling: `surface-2` fill, `1px` border, `5px` radius.
 - **Checked:** fills with the live `--accent`, checkmark in `--accent-ink`, with a brief scale-in; hover warms the border to the accent. The control follows the current Digimon's color like everything else.
 
+### Steppers
+- **Style (`Stepper`):** a compact −/value/+ control on a `surface-2` fill, `1px` border, `--radius-sm`; the value is `--font-display` 700 with tabular figures. The − / + buttons wash `--accent-faint` and warm to `--accent` on hover, and disable at the bounds. For small bounded integers (the 0–4 Agent-Skill stacks in Settings); touch bumps the buttons to 40px.
+
 ### Navigation
 - **Top bar** (`--topbar-height` 54px): wordmark (`BrandMark`, Chakra Petch), the Tree ⇄ Field guide `ViewSwitch`, search, and action toggles (`SegButton`). Active view reads via the accent-soft fill.
+
+### Popovers (menus & tips)
+Floating layers use the native Popover API so they sit in the top layer and clear the detail-panel / bottom-sheet stacking context (see **The Top-Layer Popover Rule**); each is positioned in JS under its trigger and carries the `--shadow-dropdown` plus a brief `pop-in`.
+- **Help tip (`InfoTip`):** a `?` on a small `surface-2` pill opens a `surface` bubble with an on-demand explanation and an optional foot action (e.g. *"Open settings →"* in `--accent`). Light-dismiss + Escape; works on pointer, keyboard, and touch (click toggles).
+- **Menus (`SettingsMenu`, `HiddenBranches`):** `popover="manual"`, driven by store/state (so they can also be opened from elsewhere — e.g. the detail panel's "Open settings"), with our own outside-pointer + captured-Escape dismissal so Escape closes the menu without also unwinding lineage focus / the route via the global key handler. Height-capped with internal scroll for short screens.
 
 ### Signature: the chromatic graph & detail panel
 - **Graph (Cytoscape):** a themed viewport where node cards stay bright and each selected node glows in its *own* signature color (`data(accent)`); edges are colored by lineage direction and route role. This is the system's centerpiece and the reason the chrome stays quiet.
@@ -209,6 +230,8 @@ Components are tactile and confident: solid graphite fills at rest, a wash of th
 - **Do** keep components tactile: `surface-2` fills, `--accent-soft` active states, a `scale(0.96)` press, brisk `130ms` transitions.
 - **Do** reserve the chromatic morph and other motion for meaning (state, feedback, the accent sweep), and honor `prefers-reduced-motion` — the global rule neutralizes transitions; don't fight it.
 - **Do** build depth by stacking `bg` → `surface` → `surface-2`; add a shadow only when an element genuinely floats.
+- **Do** render any menu or tip that overlays the panel or bottom sheet as a native `[popover]` in the top layer, positioned in JS under its trigger — never an absolutely-positioned dropdown nested in the top bar (it paints behind the panel on mobile).
+- **Do** show a player-modified value as `base → reduced` (base greyed, arrow, result bold); never hide the original, and keep each `STAT base → reduced` block unbreakable.
 - **Do** keep Chakra Petch to the wordmark and splash; everything else is Hanken Grotesk, hierarchy by weight.
 
 ### Don't:

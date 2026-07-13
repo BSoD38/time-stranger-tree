@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-13T19:30:00Z",
+  "generatedAt": "2026-07-13T23:20:00Z",
   "title": "Design System: Time Stranger Tree",
   "extensions": {
     "colorMeta": {
@@ -98,6 +98,30 @@
       "description": "Compact icon control (close / swap / pager); accent-faint wash and press feedback.",
       "html": "<button class=\"ds-icon\" aria-label=\"Close\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\"><path d=\"M4 4 L12 12 M12 4 L4 12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button>",
       "css": ".ds-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-pill);color:var(--text-dim);transition:color 130ms,border-color 130ms,background-color 130ms}.ds-icon:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-faint)}.ds-icon:active{transform:scale(0.92)}"
+    },
+    {
+      "name": "Reduced Requirement Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "A stat requirement eased by the player's Agent Skills: bond-tinted, reads base -> reduced (base greyed, arrow, reduced bold). The base is never hidden; the block never wraps mid-stat.",
+      "html": "<span class=\"ds-req\">ATK ≥ <span class=\"ds-req__was\">480</span><span class=\"ds-req__arr\">→</span><span class=\"ds-req__now\">288</span></span>",
+      "css": ".ds-req{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:2px 9px;border:1px solid color-mix(in oklab,var(--bond) 55%,var(--border));border-radius:var(--radius-pill);background:color-mix(in oklab,var(--bond) 15%,transparent);color:var(--text);font-family:var(--font-display);font-size:11px;font-weight:600;line-height:17px;font-variant-numeric:tabular-nums}.ds-req__was{color:var(--text-mute);font-weight:600}.ds-req__arr{margin:0 3px;color:var(--text-mute)}.ds-req__now{color:var(--text);font-weight:700}"
+    },
+    {
+      "name": "Stepper",
+      "kind": "custom",
+      "refersTo": "stepper",
+      "description": "Compact -/value/+ control for a small bounded integer (the 0-4 Agent-Skill stacks in Settings).",
+      "html": "<div class=\"ds-step\"><button class=\"ds-step__btn\" aria-label=\"decrease\">−</button><span class=\"ds-step__val\">2</span><button class=\"ds-step__btn\" aria-label=\"increase\">+</button></div>",
+      "css": ".ds-step{display:inline-grid;grid-auto-flow:column;align-items:center;padding:2px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}.ds-step__btn{width:24px;height:22px;display:grid;place-items:center;background:none;border:none;border-radius:var(--radius-xs);color:var(--text-dim);font-size:15px;line-height:1;transition:background 130ms,color 130ms}.ds-step__btn:hover{background:var(--accent-faint);color:var(--accent)}.ds-step__val{min-width:20px;text-align:center;font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}"
+    },
+    {
+      "name": "Info Tip",
+      "kind": "custom",
+      "refersTo": "info-tip",
+      "description": "A '?' help affordance; a native top-layer popover with an on-demand explanation and an optional foot action (e.g. Open settings). Trigger shown here; the bubble uses surface fill + dropdown shadow.",
+      "html": "<button class=\"ds-tip\" aria-label=\"Help\">?</button>",
+      "css": ".ds-tip{display:inline-grid;place-items:center;width:15px;height:15px;padding:0;border:1px solid var(--border);border-radius:var(--radius-pill);background:var(--surface-2);color:var(--text-mute);font-size:10.5px;font-weight:700;line-height:1;cursor:help;transition:color 130ms,border-color 130ms}.ds-tip:hover{color:var(--accent);border-color:var(--accent)}"
     }
   ],
   "narrative": {
@@ -115,7 +139,9 @@
       { "name": "The No Sole-Channel Rule", "body": "Color never carries meaning alone. Every attribute, resistance, domain accent, and route-step kind is paired with a name, a glyph, or a shape badge. If you remove all color, the interface must still be readable.", "section": "colors" },
       { "name": "The One-Family Rule", "body": "Hierarchy comes from weight and size within Hanken Grotesk, never from adding another body face.", "section": "typography" },
       { "name": "The Brand-Face Firewall", "body": "Chakra Petch is for the wordmark and splash only. It never labels a control, a stat, or a row.", "section": "typography" },
-      { "name": "The Flat-Stage Rule", "body": "Surfaces are flat at rest; if something has a drop shadow it must actually float above the page (a dropdown, the panel).", "section": "elevation" }
+      { "name": "The Flat-Stage Rule", "body": "Surfaces are flat at rest; if something has a drop shadow it must actually float above the page (a dropdown, the panel).", "section": "elevation" },
+      { "name": "The Top-Layer Popover Rule", "body": "Any menu or tip that overlays the detail panel or the mobile bottom sheet is a native [popover] in the top layer, never an absolutely-positioned dropdown nested in the top bar — a nested dropdown is capped by its ancestor's stacking context (--z-topbar 20 sits below --z-panel 40) and paints behind the panel on mobile. Position it in JS under its trigger; keep --shadow-dropdown + pop-in.", "section": "elevation" },
+      { "name": "The Both-Numbers Rule", "body": "A value changed by a player setting shows its origin — base -> reduced, base quiet, result bold — so the arithmetic is visible and the original is never lost.", "section": "elevation" }
     ],
     "dos": [
       "Do take the accent from the selected Digimon (--accent, repainted by chroma.ts); let the graphite chrome recede so the subject leads.",
@@ -124,6 +150,8 @@
       "Do keep components tactile: surface-2 fills, --accent-soft active states, a scale(0.96) press, brisk 130ms transitions.",
       "Do reserve motion for meaning and honor prefers-reduced-motion.",
       "Do build depth by stacking bg → surface → surface-2; add a shadow only when an element genuinely floats.",
+      "Do render any menu or tip that overlays the panel or bottom sheet as a native [popover] in the top layer, positioned in JS under its trigger — never an absolutely-positioned dropdown nested in the top bar (it paints behind the panel on mobile).",
+      "Do show a player-modified value as base → reduced (base greyed, arrow, result bold); never hide the original, and keep each STAT base → reduced block unbreakable.",
       "Do keep Chakra Petch to the wordmark and splash; everything else is Hanken Grotesk, hierarchy by weight."
     ],
     "donts": [
