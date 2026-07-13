@@ -179,6 +179,23 @@ function fitEles(cy: Core, slugs: Set<string>, padding: number, animate: boolean
 }
 
 /**
+ * Pan (and zoom) so a node sits at the viewport centre. Derives the pan from the
+ * node's model position rather than `zoom: { position }` — the latter only zooms
+ * ABOUT a point and leaves the pan untouched, so when we frame a selection after
+ * leaving route / focus (viewport still parked on the old compact staircase) the
+ * node stays off-screen and the whole graph reads as panned into empty space.
+ */
+function centerNode(cy: Core, node: ReturnType<Core['$id']>, zoom: number, animate: boolean): void {
+  const p = node.position();
+  const pan = { x: cy.width() / 2 - p.x * zoom, y: cy.height() / 2 - p.y * zoom };
+  if (animate) cy.animate({ zoom, pan, duration: 350, easing: 'ease-out-cubic' });
+  else {
+    cy.zoom(zoom);
+    cy.pan(pan);
+  }
+}
+
+/**
  * Position + viewport are a function of orientation × focus × route, so they're
  * recomputed together whenever any of those change:
  *   • focused + "hide others" → compact the lineage tight and frame it
@@ -232,7 +249,7 @@ function frameGraph(cy: Core, animate = true): void {
 
   const anchor = state.selected ? cy.$id(state.selected) : null;
   if (anchor?.length) {
-    cy.animate({ zoom: { level: 0.6, position: anchor.position() }, duration: 350 });
+    centerNode(cy, anchor, 0.6, animate);
   } else {
     resetView(cy, o, animate);
   }
