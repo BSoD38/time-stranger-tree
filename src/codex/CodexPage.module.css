@@ -194,6 +194,10 @@
   align-items: center;
   gap: 8px;
   width: 100%;
+  /* Reserve the height of the with-badge state (the 17px count pill + padding) so
+     the badge appearing/disappearing never grows the row and nudges the panel
+     below it down. The coarse-pointer rule below raises this for touch. */
+  min-height: 23px;
   padding: 3px 2px;
   background: none;
   border: none;
@@ -237,6 +241,15 @@
   min-height: 0;
   overflow: hidden;
 }
+/* With every facet expanded (Trait + Base personality's four bond groups +
+   Special skill + Attack type + Resistance) the panel can outgrow a short
+   viewport. The toolbar doesn't scroll, so cap the open panel to a slice of the
+   viewport and let the facets scroll within — every filter stays reachable. */
+.advPanel[data-open='true'] .advInner {
+  overflow-y: auto;
+  max-height: min(56dvh, 480px);
+  overscroll-behavior: contain;
+}
 .advContent {
   display: flex;
   flex-direction: column;
@@ -244,13 +257,20 @@
   padding: 12px 6px 6px;
 }
 
-/* Hairline splitting the special-skill facet's elements from its effects. */
-.chipDivider {
-  align-self: stretch;
-  width: 1px;
-  min-height: 18px;
-  margin: 0 3px;
-  background: var(--border);
+/* Special-skill sub-block: a full-line heading over two inline sub-facets
+   (Element, Skill type), matching the other advanced sections' block header. */
+.skillBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Base-personality sub-block: heading, then the four bond groups (shared
+   ui/PersonalityGroups, same as the Tree popover). */
+.personalityBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 /* Resistances sub-block: heading + legend, then the elemental / attribute rows. */
@@ -286,12 +306,15 @@
 
 /* Tri-state resistance chip — mirrors ui/FilterChip's pill, plus green/red
    resist/weak states that speak the detail-panel ResistanceGrid's language
-   (▼ resists · ▲ weak). The marker keeps a fixed slot so cycling never reflows. */
+   (▼ resists · ▲ weak). At rest: a centred label with generous symmetric padding.
+   When active, the horizontal padding tightens by exactly the marker's width + gap
+   (9 + 3 = 12px, i.e. 6px off each side), so the marker slots in on the left and
+   the chip keeps a constant width — the row never reflows, with no lopsided gap at
+   rest and no wasted space on the right when active. */
 .triChip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 10px 3px 8px;
+  padding: 3px 14px;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
@@ -305,11 +328,17 @@
     background var(--transition-fast),
     color var(--transition-fast);
 }
+.triChip[data-state='resist'],
+.triChip[data-state='weak'] {
+  padding-inline: 8px;
+}
 .triMark {
-  min-width: 8px;
+  flex: none;
+  width: 9px;
+  margin-right: 3px;
+  text-align: center;
   font-size: var(--fs-micro);
   line-height: 1;
-  text-align: center;
 }
 .triChip[data-state='off']:hover {
   border-color: var(--border-strong);

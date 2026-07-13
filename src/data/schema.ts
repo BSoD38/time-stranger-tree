@@ -39,6 +39,15 @@ export type Personality =
   | 'Enlightened' | 'Sly' | 'Astute' | 'Strategic'
   | 'Opportunistic' | 'Friendly' | 'Sociable' | 'Compassionate';
 
+/** Canonical order of the 16 base personalities — four blocks of four, one block
+ *  per Agent-Skill bond (see agentSkills.ts's PERSONALITY_CATEGORY). */
+export const PERSONALITY_KEYS: readonly Personality[] = [
+  'Adoring', 'Devoted', 'Tolerant', 'Overprotective',
+  'Zealous', 'Brave', 'Reckless', 'Daring',
+  'Enlightened', 'Sly', 'Astute', 'Strategic',
+  'Opportunistic', 'Friendly', 'Sociable', 'Compassionate',
+];
+
 export type AgentSkillCategory = 'Valor' | 'Philanthropy' | 'Wisdom' | 'Amicability';
 
 export type ResistanceMultiplier = 0 | 0.5 | 1 | 1.5 | 2;

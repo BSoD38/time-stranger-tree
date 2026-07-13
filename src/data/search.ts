@@ -1,4 +1,4 @@
-import type { Attribute, Digimon, DigimonDatabase, Generation } from './schema';
+import type { Attribute, Digimon, DigimonDatabase, Generation, Personality } from './schema';
 
 export interface SearchEntry {
   slug: string;
@@ -58,10 +58,14 @@ export interface FilterCriteria {
   generations?: ReadonlySet<Generation>;
   attributes?: ReadonlySet<Attribute>;
   special?: ReadonlySet<SpecialFacet>;
+  /** Base personality — OR within (matches any selected), like the other facets. */
+  personalities?: ReadonlySet<Personality>;
 }
 
 export function hasActiveCriteria(f: FilterCriteria): boolean {
-  return Boolean(f.generations?.size || f.attributes?.size || f.special?.size);
+  return Boolean(
+    f.generations?.size || f.attributes?.size || f.special?.size || f.personalities?.size,
+  );
 }
 
 /** The set of special "trait" facets a Digimon satisfies. Single source of truth
@@ -83,6 +87,7 @@ export function filterSlugs(db: DigimonDatabase, f: FilterCriteria): Set<string>
   for (const d of Object.values(db.digimon)) {
     if (f.generations?.size && !f.generations.has(d.generation)) continue;
     if (f.attributes?.size && !f.attributes.has(d.attribute)) continue;
+    if (f.personalities?.size && !f.personalities.has(d.basePersonality)) continue;
     if (f.special?.size) {
       const traits = digimonTraits(d);
       let matches = false;

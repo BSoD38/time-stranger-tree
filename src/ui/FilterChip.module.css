@@ -13,6 +13,20 @@
   color: var(--text-mute);
 }
 
+/* Block variant: a full-line `.label` header above a wrapping chip row (Codex
+   advanced facets), so every section there shares the same header treatment. */
+.groupBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.blockChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+
 /* A pill toggle. --chip-color tints hover / active (defaults to the accent). */
 .chip,
 .chipActive {

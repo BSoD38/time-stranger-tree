@@ -21,7 +21,10 @@ import {
 } from './codexFilter';
 import { ATTACK_TYPES } from '../data/skills';
 import type { SpecialFacet } from '../data/search';
+import type { Personality } from '../data/schema';
 import { SPECIAL_FACETS } from '../filters/specialFacets';
+import { toggleBond } from '../filters/personalityFacet';
+import { PersonalityGroups } from '../ui/PersonalityGroups';
 import styles from './CodexPage.module.css';
 
 const STAT_TITLES: Record<string, string> = {
@@ -116,7 +119,11 @@ const CodexTableRow = memo(function CodexTableRow({
  * Reuses the detail-panel ResistanceGrid's marker + colour language (▼ reduced
  * damage, ▲ extra damage), so colour is never the sole channel and the two
  * surfaces read as one system. State is announced in the accessible name; the
- * marker keeps a fixed-width slot so cycling never reflows the chip row.
+ * marker appears only in the active states. At rest the chip is a centred label
+ * with generous symmetric padding; when it activates, the horizontal padding
+ * tightens by exactly the marker + gap width, so the marker slots in on the left
+ * while the chip keeps a constant width — the row never reflows, and there's no
+ * lopsided gap at rest nor wasted space on the right when active.
  */
 function ResistChip({
   label,
@@ -143,10 +150,12 @@ function ResistChip({
       title={name}
       onClick={onClick}
     >
-      <span className={styles.triMark} aria-hidden="true">
-        {mark}
-      </span>
-      {label}
+      {mark && (
+        <span className={styles.triMark} aria-hidden="true">
+          {mark}
+        </span>
+      )}
+      <span>{label}</span>
     </button>
   );
 }
@@ -177,6 +186,7 @@ export function CodexPage() {
     resist,
     weak,
     special,
+    personalities,
   } = useStore((s) => s.codex);
 
   const filtered = useMemo(() => {
@@ -188,7 +198,7 @@ export function CodexPage() {
     const numberQuery = /^\d+$/.test(digits) ? Number(digits) : null;
     const numberMode = numberQuery !== null || q.startsWith('#');
     const dir: 1 | -1 = sortDir === 'asc' ? 1 : -1;
-    const advanced = { skillElements: skillEls, skillTypes, resist, weak, special };
+    const advanced = { skillElements: skillEls, skillTypes, resist, weak, special, personalities };
     return rows
       .filter((r) => {
         if (gens.size && !gens.has(r.generation)) return false;
@@ -199,9 +209,9 @@ export function CodexPage() {
         return r.name.toLowerCase().includes(q);
       })
       .sort((a, b) => compareRows(a, b, sortKey, level, dir));
-  }, [rows, query, gens, attrs, skillEls, skillTypes, resist, weak, special, sortKey, sortDir, level]);
+  }, [rows, query, gens, attrs, skillEls, skillTypes, resist, weak, special, personalities, sortKey, sortDir, level]);
 
-  const adv = { skillElements: skillEls, skillTypes, resist, weak, special };
+  const adv = { skillElements: skillEls, skillTypes, resist, weak, special, personalities };
   const advCount = advancedCount(adv);
   const advActive = hasAdvancedCriteria(adv);
   const filtering = query.trim() !== '' || gens.size > 0 || attrs.size > 0 || advActive;
@@ -215,6 +225,7 @@ export function CodexPage() {
       resist: new Set(),
       weak: new Set(),
       special: new Set(),
+      personalities: new Set(),
     });
 
   // Advanced facets are opt-in, so the disclosure defaults closed; its open
@@ -240,6 +251,8 @@ export function CodexPage() {
     patchCodex({ skillElements: toggled(skillEls, value) });
   const toggleType = (value: string) => patchCodex({ skillTypes: toggled(skillTypes, value) });
   const toggleTrait = (value: SpecialFacet) => patchCodex({ special: toggled(special, value) });
+  const togglePersonality = (value: Personality) =>
+    patchCodex({ personalities: toggled(personalities, value) });
   const cycle = (key: ResistKey) => {
     const next = cycleResist(resist, weak, key);
     patchCodex({ resist: next.resist, weak: next.weak });
@@ -410,7 +423,7 @@ export function CodexPage() {
           >
             <div className={styles.advInner}>
               <div className={styles.advContent}>
-              <FilterChipGroup label="Trait">
+              <FilterChipGroup label="Trait" block>
                 {SPECIAL_FACETS.map(({ key, label, title }) => (
                   <FilterChip
                     key={key}
@@ -423,27 +436,41 @@ export function CodexPage() {
                 ))}
               </FilterChipGroup>
 
-              <FilterChipGroup label="Special skill">
-                {ELEMENT_KEYS.map((el) => (
-                  <FilterChip key={el} active={skillEls.has(el)} onClick={() => toggleSkill(el)}>
-                    {el}
-                  </FilterChip>
-                ))}
-                <span className={styles.chipDivider} aria-hidden="true" />
-                {SKILL_FUNCTIONS.map((fn) => (
-                  <FilterChip key={fn} active={skillEls.has(fn)} onClick={() => toggleSkill(fn)}>
-                    {fn}
-                  </FilterChip>
-                ))}
-              </FilterChipGroup>
+              <div className={styles.personalityBlock}>
+                <span className="label">Base personality</span>
+                <PersonalityGroups
+                  selected={personalities}
+                  onToggle={togglePersonality}
+                  onToggleBond={(group) =>
+                    patchCodex({ personalities: toggleBond(personalities, group) })
+                  }
+                />
+              </div>
 
-              <FilterChipGroup label="Attack type">
-                {ATTACK_TYPES.map((t) => (
-                  <FilterChip key={t} active={skillTypes.has(t)} onClick={() => toggleType(t)}>
-                    {t[0].toUpperCase() + t.slice(1)}
-                  </FilterChip>
-                ))}
-              </FilterChipGroup>
+              {/* One "Special skill" section with two inline sub-facets: the
+                  elemental school, and the skill kind (attack type or effect). */}
+              <div className={styles.skillBlock}>
+                <span className="label">Special skill</span>
+                <FilterChipGroup label="Element">
+                  {ELEMENT_KEYS.map((el) => (
+                    <FilterChip key={el} active={skillEls.has(el)} onClick={() => toggleSkill(el)}>
+                      {el}
+                    </FilterChip>
+                  ))}
+                </FilterChipGroup>
+                <FilterChipGroup label="Skill type">
+                  {ATTACK_TYPES.map((t) => (
+                    <FilterChip key={t} active={skillTypes.has(t)} onClick={() => toggleType(t)}>
+                      {t[0].toUpperCase() + t.slice(1)}
+                    </FilterChip>
+                  ))}
+                  {SKILL_FUNCTIONS.map((fn) => (
+                    <FilterChip key={fn} active={skillTypes.has(fn)} onClick={() => toggleType(fn)}>
+                      {fn}
+                    </FilterChip>
+                  ))}
+                </FilterChipGroup>
+              </div>
 
               <div className={styles.resistBlock}>
                 <div className={styles.resistHead}>

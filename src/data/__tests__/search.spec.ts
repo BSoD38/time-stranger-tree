@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PERSONALITY_KEYS } from '../schema';
 import { buildSearchIndex, filterSlugs, search } from '../search';
 import { loadRealGraph } from './fixture';
 
@@ -54,5 +55,30 @@ describe('filterSlugs', () => {
 
   it('empty criteria matches everything', () => {
     expect(filterSlugs(g.db, {}).size).toBe(475);
+  });
+
+  it('filters by base personality — every hit has the selected personality', () => {
+    const sly = filterSlugs(g.db, { personalities: new Set(['Sly']) });
+    expect(sly.size).toBeGreaterThan(0);
+    for (const slug of sly) expect(g.db.digimon[slug].basePersonality).toBe('Sly');
+  });
+
+  it('personality facet ORs within, ANDs across', () => {
+    const one = filterSlugs(g.db, { personalities: new Set(['Sly']) });
+    const two = filterSlugs(g.db, { personalities: new Set(['Sly', 'Brave']) });
+    expect(two.size).toBeGreaterThan(one.size);
+
+    const slyVaccine = filterSlugs(g.db, {
+      personalities: new Set(['Sly']),
+      attributes: new Set(['Vaccine']),
+    });
+    for (const slug of slyVaccine) {
+      expect(g.db.digimon[slug].basePersonality).toBe('Sly');
+      expect(g.db.digimon[slug].attribute).toBe('Vaccine');
+    }
+  });
+
+  it('every Digimon has a base personality — all 16 selected matches all 475', () => {
+    expect(filterSlugs(g.db, { personalities: new Set(PERSONALITY_KEYS) }).size).toBe(475);
   });
 });

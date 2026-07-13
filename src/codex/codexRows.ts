@@ -3,6 +3,7 @@ import type {
   DigimonDatabase,
   Element,
   Generation,
+  Personality,
   ResistanceMultiplier,
   StatKey,
   StatLevel,
@@ -28,6 +29,7 @@ export interface CodexRow {
   elementalResistances: Record<Element, ResistanceMultiplier>;
   /** Special "trait" facets this Digimon satisfies (item / jogress / bond / ridable). */
   traits: ReadonlySet<SpecialFacet>;
+  basePersonality: Personality;
 }
 
 export type SortKey = 'number' | 'name' | 'generation' | 'attribute' | 'total' | StatKey;
@@ -69,6 +71,7 @@ export function buildCodexRows(db: DigimonDatabase): CodexRow[] {
         specialSkills,
         elementalResistances: d.elementalResistances,
         traits: digimonTraits(d),
+        basePersonality: d.basePersonality,
       };
     })
     .sort((a, b) => a.number - b.number);

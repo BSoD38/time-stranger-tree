@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Element, ResistanceMultiplier } from '../../data/schema';
+import type { Element, Personality, ResistanceMultiplier } from '../../data/schema';
 import type { SpecialFacet } from '../../data/search';
 import type { AttackType } from '../../data/skills';
 import {
@@ -20,6 +20,7 @@ function target(over: {
   skills?: SkillSpec[];
   el?: Partial<Record<Element, ResistanceMultiplier>>;
   traits?: SpecialFacet[];
+  personality?: Personality;
 } = {}): AdvancedTarget {
   const el = {
     Fire: 1, Water: 1, Plant: 1, Ice: 1, Electricity: 1, Earth: 1,
@@ -30,13 +31,14 @@ function target(over: {
     specialSkills: (over.skills ?? []).map((s) => ({ element: s.el, type: s.type ?? null })),
     elementalResistances: el,
     traits: new Set(over.traits ?? []),
+    basePersonality: over.personality ?? 'Brave',
   };
 }
 
 function criteria(over: Partial<AdvancedCriteria> = {}): AdvancedCriteria {
   return {
     skillElements: new Set(), skillTypes: new Set(), resist: new Set(), weak: new Set(),
-    special: new Set(), ...over,
+    special: new Set(), personalities: new Set(), ...over,
   };
 }
 
@@ -51,22 +53,26 @@ describe('matchesAdvanced', () => {
     expect(matchesAdvanced(t, criteria({ skillElements: new Set(['Dark']) }))).toBe(false);
   });
 
-  it('matches functional skill categories the same way as elements', () => {
+  it('skill-kind facet matches a non-damaging skill by its effect category', () => {
     const healer = target({ skills: [{ el: 'Recovery' }] });
-    expect(matchesAdvanced(healer, criteria({ skillElements: new Set(['Recovery']) }))).toBe(true);
+    expect(matchesAdvanced(healer, criteria({ skillTypes: new Set(['Recovery']) }))).toBe(true);
     expect(
-      matchesAdvanced(target({ skills: [{ el: 'Fire', type: 'magic' }] }), criteria({ skillElements: new Set(['Recovery']) })),
+      matchesAdvanced(target({ skills: [{ el: 'Fire', type: 'magic' }] }), criteria({ skillTypes: new Set(['Recovery']) })),
     ).toBe(false);
   });
 
-  it('attack-type facet is OR within, and matches type alone', () => {
+  it('skill-kind facet is OR within — attack types and effects are one axis', () => {
     const t = target({ skills: [{ el: 'Fire', type: 'magic' }] });
     expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['magic']) }))).toBe(true);
     expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['physical']) }))).toBe(false);
-    expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['magic', 'physical']) }))).toBe(true);
+    // "magic OR recovery" — the magic attack satisfies it (the two combine as OR,
+    // not same-skill AND, so this no longer wrongly returns nothing)
+    expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['magic', 'Recovery']) }))).toBe(true);
+    const healer = target({ skills: [{ el: 'Recovery' }] });
+    expect(matchesAdvanced(healer, criteria({ skillTypes: new Set(['magic', 'Recovery']) }))).toBe(true);
   });
 
-  it('combines element + type SAME-SKILL, not independently', () => {
+  it('combines element + kind SAME-SKILL, not independently', () => {
     // A Fire *magic* attack and a Water *physical* attack, on different skills.
     const t = target({ skills: [{ el: 'Fire', type: 'magic' }, { el: 'Water', type: 'physical' }] });
     // "Fire physical" — no single skill is both → miss (independent-AND would wrongly pass)
@@ -77,10 +83,10 @@ describe('matchesAdvanced', () => {
     expect(matchesAdvanced(t, criteria({ skillElements: new Set(['Water']), skillTypes: new Set(['physical']) }))).toBe(true);
   });
 
-  it('never matches a type constraint against a typeless (buff/heal) skill', () => {
+  it("a non-damaging skill's kind is its effect, never an attack type", () => {
     const t = target({ skills: [{ el: 'Buff', type: null }] });
-    expect(matchesAdvanced(t, criteria({ skillElements: new Set(['Buff']) }))).toBe(true);
-    expect(matchesAdvanced(t, criteria({ skillElements: new Set(['Buff']), skillTypes: new Set(['physical']) }))).toBe(false);
+    expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['Buff']) }))).toBe(true);
+    expect(matchesAdvanced(t, criteria({ skillTypes: new Set(['physical']) }))).toBe(false);
   });
 
   it('resist requires ×0 or ×0.5; ×1 and above fail', () => {
@@ -129,6 +135,23 @@ describe('matchesAdvanced', () => {
       matchesAdvanced(t, criteria({ special: new Set(['ridable']), skillElements: new Set(['Water']) })),
     ).toBe(false);
   });
+
+  it('personality facet is OR within — matches a target whose base personality is selected', () => {
+    const sly = target({ personality: 'Sly' });
+    expect(matchesAdvanced(sly, criteria({ personalities: new Set(['Sly']) }))).toBe(true);
+    expect(matchesAdvanced(sly, criteria({ personalities: new Set(['Sly', 'Brave']) }))).toBe(true);
+    expect(matchesAdvanced(sly, criteria({ personalities: new Set(['Brave']) }))).toBe(false);
+  });
+
+  it('personality facet ANDs against the other facets', () => {
+    const t = target({ personality: 'Reckless', skills: [{ el: 'Fire', type: 'magic' }] });
+    expect(
+      matchesAdvanced(t, criteria({ personalities: new Set(['Reckless']), skillElements: new Set(['Fire']) })),
+    ).toBe(true);
+    expect(
+      matchesAdvanced(t, criteria({ personalities: new Set(['Reckless']), skillElements: new Set(['Water']) })),
+    ).toBe(false);
+  });
 });
 
 describe('cycleResist / resistState', () => {
@@ -174,12 +197,17 @@ describe('hasAdvancedCriteria / advancedCount', () => {
       resist: new Set([elKey('Ice')]),
       weak: new Set([elKey('Light')]),
       special: new Set(['jogress', 'ridable']),
+      personalities: new Set(['Sly', 'Brave']),
     });
     expect(hasAdvancedCriteria(c)).toBe(true);
-    expect(advancedCount(c)).toBe(7);
+    expect(advancedCount(c)).toBe(9);
 
     // the trait facet alone counts, too
     expect(hasAdvancedCriteria(criteria({ special: new Set(['bond']) }))).toBe(true);
     expect(advancedCount(criteria({ special: new Set(['bond']) }))).toBe(1);
+
+    // the personality facet alone counts, too
+    expect(hasAdvancedCriteria(criteria({ personalities: new Set(['Enlightened']) }))).toBe(true);
+    expect(advancedCount(criteria({ personalities: new Set(['Enlightened', 'Astute']) }))).toBe(2);
   });
 });

@@ -3,11 +3,13 @@
 // is unit-testable and re-usable, mirroring the src/data/ layer's discipline.
 //
 // Semantics differ per facet, by design:
-//   • Special skill      — element (Fire…Null, or a Buff/Debuff/Recovery effect)
-//     and attack type (magic / physical) are two sub-facets, OR within each. They
-//     combine SAME-SKILL: a Digimon matches only if it has ONE special skill that
-//     satisfies both — "Fire + Physical" means an actual Fire physical attack, not
-//     a Fire attack plus some unrelated physical one.
+//   • Special skill      — two sub-facets, OR within each:
+//       – element (Fire…Null): the elemental school of a damaging skill.
+//       – skill kind (magic / physical / Buff / Debuff / Recovery): what the skill
+//         IS — its attack type when it deals damage, else its effect category.
+//     They combine SAME-SKILL: a Digimon matches only if it owns ONE special skill
+//     that satisfies both — "Fire + Physical" means an actual Fire physical attack,
+//     not a Fire attack plus some unrelated physical one.
 //   • Elemental resist   — AND within the facet: each tri-state chip is an
 //     independent profile constraint ("resists Fire AND weak to Dark").
 // Across facets (and against the basic gen/attribute filters) it stays AND.
@@ -16,7 +18,7 @@
 // deterministic (a Digimon's attribute fixes its attribute resistances), so
 // filtering by it would merely restate the basic attribute filter.
 
-import { ELEMENT_KEYS, type Element, type ResistanceMultiplier } from '../data/schema';
+import { ELEMENT_KEYS, type Element, type Personality, type ResistanceMultiplier } from '../data/schema';
 import type { SpecialFacet } from '../data/search';
 import type { AttackType } from '../data/skills';
 
@@ -46,14 +48,18 @@ export interface AdvancedTarget {
   specialSkills: readonly SpecialSkillTag[];
   elementalResistances: Record<Element, ResistanceMultiplier>;
   traits: ReadonlySet<SpecialFacet>;
+  basePersonality: Personality;
 }
 
 export interface AdvancedCriteria {
-  skillElements: ReadonlySet<string>;
-  skillTypes: ReadonlySet<string>; // subset of ATTACK_TYPES
+  skillElements: ReadonlySet<string>; // combat elements only (Fire…Null)
+  // The skill-kind facet: attack types (magic / physical) and the non-damaging
+  // effect categories (Buff / Debuff / Recovery), matched against each skill's kind.
+  skillTypes: ReadonlySet<string>;
   resist: ReadonlySet<string>;
   weak: ReadonlySet<string>;
   special: ReadonlySet<SpecialFacet>; // trait facets — OR within, like the Tree filter
+  personalities: ReadonlySet<Personality>; // base personality — OR within, like the Tree filter
 }
 
 export const EMPTY_ADVANCED: AdvancedCriteria = {
@@ -62,6 +68,7 @@ export const EMPTY_ADVANCED: AdvancedCriteria = {
   resist: new Set(),
   weak: new Set(),
   special: new Set(),
+  personalities: new Set(),
 };
 
 /** Which state a resistance chip is in given the current resist/weak sets. */
@@ -97,13 +104,21 @@ function multiplierFor(t: AdvancedTarget, key: string): ResistanceMultiplier | u
   return undefined;
 }
 
+/** A skill's "kind" for the skill-type facet: its attack type (magic / physical)
+ *  when it deals damage, else its effect category (Buff / Debuff / Recovery, which
+ *  the dataset stores as the element) — the single "what kind of skill is this"
+ *  axis the UI groups under "Skill type". */
+function skillKind(s: SpecialSkillTag): string {
+  return s.type !== null ? s.type : s.element;
+}
+
 /** Same-skill match: does the target own one special skill satisfying both the
- *  element and attack-type sub-facets? Empty sub-facet = no constraint. */
+ *  element and skill-kind sub-facets? Empty sub-facet = no constraint. */
 function matchesSpecialSkill(t: AdvancedTarget, c: AdvancedCriteria): boolean {
   if (!c.skillElements.size && !c.skillTypes.size) return true;
   for (const s of t.specialSkills) {
     const elementOk = !c.skillElements.size || c.skillElements.has(s.element);
-    const typeOk = !c.skillTypes.size || (s.type !== null && c.skillTypes.has(s.type));
+    const typeOk = !c.skillTypes.size || c.skillTypes.has(skillKind(s));
     if (elementOk && typeOk) return true;
   }
   return false;
@@ -117,10 +132,18 @@ function matchesTraits(t: AdvancedTarget, c: AdvancedCriteria): boolean {
   return false;
 }
 
+/** OR within the personality facet (mirrors the Tree filter): the target's base
+ *  personality must be one of those selected. Empty facet = no constraint. */
+function matchesPersonality(t: AdvancedTarget, c: AdvancedCriteria): boolean {
+  if (!c.personalities.size) return true;
+  return c.personalities.has(t.basePersonality);
+}
+
 /** True when the target passes every advanced constraint (empty = passes). */
 export function matchesAdvanced(t: AdvancedTarget, c: AdvancedCriteria): boolean {
   if (!matchesSpecialSkill(t, c)) return false;
   if (!matchesTraits(t, c)) return false;
+  if (!matchesPersonality(t, c)) return false;
   // Resist = takes reduced damage (×0 immune or ×0.5). Weak = takes extra (×1.5/×2).
   for (const key of c.resist) {
     const m = multiplierFor(t, key);
@@ -139,13 +162,19 @@ export function hasAdvancedCriteria(c: AdvancedCriteria): boolean {
     c.skillTypes.size > 0 ||
     c.resist.size > 0 ||
     c.weak.size > 0 ||
-    c.special.size > 0
+    c.special.size > 0 ||
+    c.personalities.size > 0
   );
 }
 
 /** Total number of active advanced constraints — drives the collapsed badge. */
 export function advancedCount(c: AdvancedCriteria): number {
   return (
-    c.skillElements.size + c.skillTypes.size + c.resist.size + c.weak.size + c.special.size
+    c.skillElements.size +
+    c.skillTypes.size +
+    c.resist.size +
+    c.weak.size +
+    c.special.size +
+    c.personalities.size
   );
 }

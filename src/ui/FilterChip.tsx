@@ -1,8 +1,30 @@
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './FilterChip.module.css';
 
-/** A labelled row of filter chips — one facet group (Gen, Attribute, Trait…). */
-export function FilterChipGroup({ label, children }: { label: string; children: ReactNode }) {
+/**
+ * A labelled facet group (Gen, Attribute, Trait…). Two layouts:
+ *  - inline (default): a subdued small-caps label sitting on the same wrapping row
+ *    as its chips — the compact form for the Tree bar and the Codex's basic filters.
+ *  - block: a full-line `.label` header above a wrapping chip row — used across the
+ *    Codex's advanced facets so every section there reads with the same header.
+ */
+export function FilterChipGroup({
+  label,
+  children,
+  block = false,
+}: {
+  label: string;
+  children: ReactNode;
+  block?: boolean;
+}) {
+  if (block) {
+    return (
+      <div className={styles.groupBlock}>
+        <span className="label">{label}</span>
+        <div className={styles.blockChips}>{children}</div>
+      </div>
+    );
+  }
   return (
     <div className={styles.group}>
       <span className={`label ${styles.groupLabel}`}>{label}</span>

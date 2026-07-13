@@ -9,7 +9,7 @@ import {
   EMPTY_AGENT_SKILLS,
   type AgentSkillStacks,
 } from '../data/agentSkills';
-import type { AgentSkillCategory, Attribute, Generation, StatLevel } from '../data/schema';
+import type { AgentSkillCategory, Attribute, Generation, Personality, StatLevel } from '../data/schema';
 import type { SpecialFacet } from '../data/search';
 import type { SortKey as CodexSortKey } from '../codex/codexRows';
 
@@ -113,6 +113,9 @@ export interface CodexState {
   // Trait facets (item / jogress / bond / ridable) — the same set the Tree filter
   // offers, mirrored into the Field Guide's advanced filters. OR within.
   special: ReadonlySet<SpecialFacet>;
+  // Base personality — the same facet the Tree offers (via its popover), mirrored
+  // into the advanced filters. OR within.
+  personalities: ReadonlySet<Personality>;
 }
 
 const emptyCodex: CodexState = {
@@ -127,6 +130,7 @@ const emptyCodex: CodexState = {
   resist: new Set(),
   weak: new Set(),
   special: new Set(),
+  personalities: new Set(),
 };
 
 /** Top-level surface: the evolution graph, or the flat Codex table. */
@@ -143,10 +147,13 @@ export interface AppState {
    *  the current focus: cleared whenever `focus` changes. Session-only (not
    *  URL-persisted), like `route.avoidJogress`. */
   lineageExcluded: ReadonlySet<string>;
-  // Tree filters: attribute + trait only. Generation is the graph's spatial axis,
-  // so it isn't a tree filter (the Codex keeps its own generation filter, codex.*).
+  // Tree filters: attribute + trait + base personality. Generation is the graph's
+  // spatial axis, so it isn't a tree filter (the Codex keeps its own generation
+  // filter, codex.*). Personality is offered via a popover (16 in 4 bonds) so the
+  // bar stays one row on mobile.
   attributes: ReadonlySet<Attribute>;
   special: ReadonlySet<SpecialFacet>;
+  personalities: ReadonlySet<Personality>;
   filtersOpen: boolean;
   route: RouteState;
   routeOpen: boolean;
@@ -180,6 +187,9 @@ export interface AppState {
   setSettingsOpen(open: boolean): void;
   toggleAttribute(value: Attribute): void;
   toggleSpecial(value: SpecialFacet): void;
+  togglePersonality(value: Personality): void;
+  /** Replace the whole personality set (bond "select all", popover clear). */
+  setPersonalities(next: ReadonlySet<Personality>): void;
   clearFilters(): void;
   setFiltersOpen(open: boolean): void;
   openRoute(partial?: Partial<Pick<RouteState, 'from' | 'to'>>): void;
@@ -219,6 +229,7 @@ export const useStore = create<AppState>()(
     lineageExcluded: new Set<string>(),
     attributes: new Set<Attribute>(),
     special: new Set<SpecialFacet>(),
+    personalities: new Set<Personality>(),
     filtersOpen: false,
     route: emptyRoute,
     routeOpen: false,
@@ -289,7 +300,9 @@ export const useStore = create<AppState>()(
     setSettingsOpen: (open) => set({ settingsOpen: open }),
     toggleAttribute: (value) => set({ attributes: toggled(get().attributes, value) }),
     toggleSpecial: (value) => set({ special: toggled(get().special, value) }),
-    clearFilters: () => set({ attributes: new Set(), special: new Set() }),
+    togglePersonality: (value) => set({ personalities: toggled(get().personalities, value) }),
+    setPersonalities: (next) => set({ personalities: next }),
+    clearFilters: () => set({ attributes: new Set(), special: new Set(), personalities: new Set() }),
     setFiltersOpen: (open) => set({ filtersOpen: open }),
 
     openRoute: (partial) =>

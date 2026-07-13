@@ -144,7 +144,11 @@ function recompute(state: AppState): void {
     // route that mode already owns the layout, so filters only grey out
     // (dim-filter, weaker than dim-hard by stylesheet order). Generation
     // watermarks are never touched — they label the stages in every mode.
-    const criteria = { attributes: state.attributes, special: state.special };
+    const criteria = {
+      attributes: state.attributes,
+      special: state.special,
+      personalities: state.personalities,
+    };
     if (hasActiveCriteria(criteria)) {
       const matching = filterSlugs(db, criteria);
       const isolating = Boolean(state.focus) || state.routeOpen;
@@ -258,7 +262,11 @@ function frameGraph(cy: Core, animate = true): void {
 
   // Normal tree view: an active filter isolates + re-packs the matches, mirroring
   // focus.
-  const criteria = { attributes: state.attributes, special: state.special };
+  const criteria = {
+    attributes: state.attributes,
+    special: state.special,
+    personalities: state.personalities,
+  };
   if (hasActiveCriteria(criteria)) {
     const matching = filterSlugs(appData().db, criteria);
     compactFilter(cy, matching, o);
@@ -313,6 +321,7 @@ export function useGraphController(): void {
             s.hideOthers,
             s.attributes,
             s.special,
+            s.personalities,
             s.route,
             s.routeOpen,
             s.lineageExcluded,
@@ -381,6 +390,7 @@ export function useGraphController(): void {
             s.orientation,
             s.attributes,
             s.special,
+            s.personalities,
             s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
           ] as const,
         () => {
