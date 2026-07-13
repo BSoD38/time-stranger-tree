@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import styles from './App.module.css';
 import { initAppData } from './data/appData';
-import { loadDatabase, prefetchThumbnails } from './data/load';
+import { loadDatabase } from './data/load';
+import { preloadAtlas } from './data/atlas';
 import { FilterBar } from './filters/FilterBar';
 import { GraphCanvas } from './graph/GraphCanvas';
 import { Celebration } from './route/Celebration';
@@ -196,7 +197,7 @@ export default function App() {
         initAppData(db);
         useStore.getState().setReady();
         initUrlSync();
-        prefetchThumbnails(Object.keys(db.digimon));
+        preloadAtlas();
       })
       .catch((err) => {
         if (!controller.signal.aborted) {

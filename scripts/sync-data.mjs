@@ -1,9 +1,11 @@
 // data/ (scraper drop-in, committed) → public/ (gitignored, served by Vite).
-// Copies digimon.json + full icons, emits 128px webp thumbnails for graph
-// nodes, and extracts each sprite's signature colour (OKLCH hue+chroma) into
-// src/generated/colors.json — the seed for the app's chromatic identity.
+// Copies digimon.json + full icons, packs every 128px sprite into ONE webp
+// atlas for graph nodes + list thumbnails, and extracts each sprite's signature
+// colour (OKLCH hue+chroma) into src/generated/colors.json — the seed for the
+// app's chromatic identity.
 // Incremental: skips outputs newer than their source, so the predev hook is a
 // fast no-op when nothing changed.
+import { createHash } from 'node:crypto';
 import { copyFile, mkdir, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,8 +15,10 @@ const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
 const DATA = path.join(ROOT, 'data');
 const PUBLIC = path.join(ROOT, 'public');
 const COLORS_OUT = path.join(ROOT, 'src', 'generated', 'colors.json');
+const ATLAS_IMG = path.join(PUBLIC, 'atlas', 'thumbs.webp');
+const ATLAS_OUT = path.join(ROOT, 'src', 'generated', 'atlas.json');
 
-const THUMB_SIZE = 128; // 56px nodes @2x DPR need >=112px
+const TILE = 128; // per-sprite tile; 56px nodes @2x DPR need >=112px
 const THUMB_QUALITY = 75;
 
 // Accent chroma is floored so even muted/metallic sprites yield a usable UI
@@ -121,10 +125,9 @@ async function extractAccent(src) {
 
 async function main() {
   await mkdir(path.join(PUBLIC, 'icons'), { recursive: true });
-  await mkdir(path.join(PUBLIC, 'thumbs'), { recursive: true });
+  await mkdir(path.join(PUBLIC, 'atlas'), { recursive: true });
 
   let copied = 0;
-  let thumbed = 0;
 
   const jsonSrc = path.join(DATA, 'digimon.json');
   const jsonDest = path.join(PUBLIC, 'digimon.json');
@@ -146,15 +149,45 @@ async function main() {
       await copyFile(src, iconDest);
       copied += 1;
     }
+  }
 
-    const thumbDest = path.join(PUBLIC, 'thumbs', file.replace(/\.png$/, '.webp'));
-    if (srcTime > (await mtime(thumbDest))) {
-      await sharp(src)
-        .resize(THUMB_SIZE, THUMB_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .webp({ quality: THUMB_QUALITY })
-        .toFile(thumbDest);
-      thumbed += 1;
-    }
+  // Sprite atlas — pack every 128px sprite into ONE webp so a fresh visit costs
+  // a single image request instead of ~475 (Vercel bills per request). Rebuilt
+  // whenever any sprite is newer than the sheet. The manifest (slug order + grid
+  // dims) is emitted to src/generated so the app maps a slug → its tile with no
+  // runtime request; the src carries a content-hash query so the sheet can be
+  // cached immutably yet still bust when the roster or art changes.
+  let atlased = 0;
+  if (newestIcon > (await mtime(ATLAS_IMG))) {
+    const slugs = icons.map((f) => f.replace(/\.png$/, '')).sort();
+    const cols = Math.ceil(Math.sqrt(slugs.length));
+    const rows = Math.ceil(slugs.length / cols);
+    const tiles = await Promise.all(
+      slugs.map(async (slug, i) => ({
+        input: await sharp(path.join(DATA, 'icons', `${slug}.png`))
+          .resize(TILE, TILE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+          .png()
+          .toBuffer(),
+        left: (i % cols) * TILE,
+        top: Math.floor(i / cols) * TILE,
+      })),
+    );
+    const sheet = await sharp({
+      create: {
+        width: cols * TILE,
+        height: rows * TILE,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite(tiles)
+      .webp({ quality: THUMB_QUALITY })
+      .toBuffer();
+    await writeFile(ATLAS_IMG, sheet);
+    const v = createHash('sha256').update(sheet).digest('hex').slice(0, 8);
+    const manifest = { version: 1, src: `/atlas/thumbs.webp?v=${v}`, tile: TILE, cols, rows, count: slugs.length, slugs };
+    await writeFile(ATLAS_OUT, JSON.stringify(manifest) + '\n');
+    atlased = slugs.length;
   }
 
   // Chromatic accents — regenerate the whole map when any sprite is newer than
@@ -172,7 +205,8 @@ async function main() {
   }
 
   console.log(
-    `data:sync — ${icons.length} icons; ${copied} copied, ${thumbed} thumbnails, ` +
+    `data:sync — ${icons.length} icons; ${copied} copied, ` +
+      `${atlased ? atlased + ' atlased' : 'atlas cached'}, ` +
       `${colored ? colored + ' accents' : 'accents cached'}`,
   );
 }

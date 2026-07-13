@@ -1,10 +1,11 @@
-import { thumbUrl } from '../data/load';
+import { ATLAS_BG_HEIGHT, ATLAS_BG_WIDTH, ATLAS_SRC, atlasPosition, hasAtlasCell } from '../data/atlas';
 import styles from './Sprite.module.css';
 
 /**
- * A Digimon thumbnail — one place for how sprites resolve and render app-wide
- * (source, lazy loading, corner radius). Decorative, so `alt` is empty. Pass a
- * `className` to add context-specific styling (e.g. a placeholder background).
+ * A Digimon thumbnail — one place for how sprites resolve and render app-wide.
+ * Every sprite is a window onto the shared atlas sheet (one request for all of
+ * them), positioned to its tile. Decorative, so it's hidden from assistive tech.
+ * Pass a `className` to add context-specific styling (e.g. a placeholder bg).
  */
 export function Sprite({
   slug,
@@ -15,14 +16,18 @@ export function Sprite({
   size?: number;
   className?: string;
 }) {
+  const has = hasAtlasCell(slug);
   return (
-    <img
+    <span
       className={className ? `${styles.sprite} ${className}` : styles.sprite}
-      src={thumbUrl(slug)}
-      alt=""
-      width={size}
-      height={size}
-      loading="lazy"
+      aria-hidden="true"
+      style={{
+        width: size,
+        height: size,
+        backgroundImage: has ? `url("${ATLAS_SRC}")` : undefined,
+        backgroundSize: `${ATLAS_BG_WIDTH} ${ATLAS_BG_HEIGHT}`,
+        backgroundPosition: atlasPosition(slug),
+      }}
     />
   );
 }

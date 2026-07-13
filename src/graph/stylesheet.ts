@@ -1,5 +1,6 @@
 import { ATTRIBUTE_COLORS, type GraphPalette } from '../theme/attribute';
 import { ATTRIBUTE_KEYS } from '../data/schema';
+import { ATLAS_BG_HEIGHT, ATLAS_BG_WIDTH, ATLAS_SRC } from '../data/atlas';
 
 // cytoscape's bundled types lag behind real style properties (underlay-*,
 // min-zoomed-font-size, line-dash-pattern...) — keep rules loosely typed and
@@ -30,8 +31,18 @@ export function buildStylesheet(palette: GraphPalette): StyleRule[] {
         shape: 'round-rectangle',
         'corner-radius': 12,
         'background-color': palette.surface2,
-        'background-image': 'data(thumb)',
-        'background-fit': 'contain',
+        // All nodes share ONE background image (the atlas), so cytoscape loads it
+        // once; each node shows its own tile by scaling the sheet up to the full
+        // grid and shifting it with data(bgx/bgy) — the sprite trick on canvas.
+        'background-image': ATLAS_SRC,
+        'background-fit': 'none',
+        'background-repeat': 'no-repeat',
+        'background-width': ATLAS_BG_WIDTH,
+        'background-height': ATLAS_BG_HEIGHT,
+        'background-image-containment': 'over',
+        'background-clip': 'node',
+        'background-position-x': 'data(bgx)',
+        'background-position-y': 'data(bgy)',
         'background-opacity': 1,
         'border-width': 2,
         'border-color': palette.border,

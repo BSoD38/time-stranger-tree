@@ -40,10 +40,6 @@
   font-size: 12.5px;
 }
 
-.endpointValue img {
-  border-radius: var(--radius-xs);
-}
-
 .endpointSearch {
   position: relative;
   display: flex;

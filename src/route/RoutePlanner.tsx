@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { appData } from '../data/appData';
-import { thumbUrl } from '../data/load';
 import { search } from '../data/search';
 import { summarizeRoute } from '../data/summary';
 import { useStore } from '../state/store';
@@ -9,6 +8,7 @@ import { useSearchNav } from '../search/useSearchNav';
 import { Chip } from '../ui/Chip';
 import { MonRow } from '../ui/MonRow';
 import { Panel, CloseButton } from '../ui/Panel';
+import { Sprite } from '../ui/Sprite';
 import { RouteStepCard } from './RouteStep';
 import styles from './RoutePlanner.module.css';
 
@@ -42,7 +42,7 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
           onClick={() => setRouteEndpoint(which, null)}
           title="Clear"
         >
-          <img src={thumbUrl(digimon.slug)} alt="" width={22} height={22} />
+          <Sprite slug={digimon.slug} size={22} />
           {digimon.name} ✕
         </button>
       ) : (

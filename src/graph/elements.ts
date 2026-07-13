@@ -1,6 +1,6 @@
 import type { ElementDefinition } from 'cytoscape';
 import type { AppData } from '../data/appData';
-import { thumbUrl } from '../data/load';
+import { atlasCell } from '../data/atlas';
 import { classifyForwardEdge, type ForwardStepClass } from '../data/route';
 import { edgeKey } from '../data/graph';
 import type { Generation } from '../data/schema';
@@ -36,9 +36,19 @@ export function buildElements(data: AppData, orientation: Orientation): ElementD
     if (d.generation === 'Armor') classes.push('gen-armor');
     if (d.generation === 'Hybrid') classes.push('gen-hybrid');
     const base = layout.positions[slug];
+    // bgx/bgy address this node's tile in the shared atlas (see stylesheet.ts).
+    const cell = atlasCell(slug);
     elements.push({
       group: 'nodes',
-      data: { id: slug, name: d.name, thumb: thumbUrl(slug), accent: nodeAccentHex(slug), bx: base.x, by: base.y },
+      data: {
+        id: slug,
+        name: d.name,
+        bgx: `${cell.x}%`,
+        bgy: `${cell.y}%`,
+        accent: nodeAccentHex(slug),
+        bx: base.x,
+        by: base.y,
+      },
       position: orient(base, orientation),
       classes: classes.join(' '),
     });
@@ -57,9 +67,11 @@ export function buildElements(data: AppData, orientation: Orientation): ElementD
   ];
   for (const { id, name, gen } of labels) {
     const pos = genLabelPos(gen, orientation);
+    // Labels paint no sprite (background-opacity 0) but still carry bgx/bgy so
+    // the base node's shared background-position mapper never sees missing data.
     elements.push({
       group: 'nodes',
-      data: { id, name, bx: pos.x, by: pos.y, gen },
+      data: { id, name, bx: pos.x, by: pos.y, gen, bgx: '0%', bgy: '0%' },
       position: pos,
       classes: labelClass,
       selectable: false,
