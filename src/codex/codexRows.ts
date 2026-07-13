@@ -1,7 +1,21 @@
-import type { Attribute, DigimonDatabase, Generation, StatKey, StatLevel } from '../data/schema';
+import type {
+  Attribute,
+  DigimonDatabase,
+  Element,
+  Generation,
+  ResistanceMultiplier,
+  StatKey,
+  StatLevel,
+} from '../data/schema';
 import { ATTRIBUTE_KEYS, GENERATION_KEYS, STAT_KEYS } from '../data/schema';
+import { classifyAttackType } from '../data/skills';
+import { digimonTraits, type SpecialFacet } from '../data/search';
+import type { SpecialSkillTag } from './codexFilter';
 
-/** A flat, presentation-ready row for the Codex table — stats pre-summed. */
+/** A flat, presentation-ready row for the Codex table — stats pre-summed, plus
+ *  the fields the advanced filters (codexFilter) read: this Digimon's special
+ *  skills tagged with element + attack type, and its elemental resistance map.
+ *  Precomputed once (buildCodexRows) so re-filtering per keystroke stays cheap. */
 export interface CodexRow {
   slug: string;
   number: number;
@@ -10,6 +24,10 @@ export interface CodexRow {
   attribute: Attribute;
   stats: Record<StatLevel, Record<StatKey, number>>;
   total: Record<StatLevel, number>;
+  specialSkills: readonly SpecialSkillTag[];
+  elementalResistances: Record<Element, ResistanceMultiplier>;
+  /** Special "trait" facets this Digimon satisfies (item / jogress / bond / ridable). */
+  traits: ReadonlySet<SpecialFacet>;
 }
 
 export type SortKey = 'number' | 'name' | 'generation' | 'attribute' | 'total' | StatKey;
@@ -34,6 +52,12 @@ export function buildCodexRows(db: DigimonDatabase): CodexRow[] {
         total1 += lv1[key];
         total99 += lv99[key];
       }
+      const specialSkills = d.specialSkills.map(
+        (skill): SpecialSkillTag => ({
+          element: skill.element,
+          type: classifyAttackType(skill.description),
+        }),
+      );
       return {
         slug: d.slug,
         number: d.number,
@@ -42,6 +66,9 @@ export function buildCodexRows(db: DigimonDatabase): CodexRow[] {
         attribute: d.attribute,
         stats: { lv1, lv99 },
         total: { lv1: total1, lv99: total99 },
+        specialSkills,
+        elementalResistances: d.elementalResistances,
+        traits: digimonTraits(d),
       };
     })
     .sort((a, b) => a.number - b.number);

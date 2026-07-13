@@ -1,6 +1,6 @@
 import { Fragment, memo, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { appData } from '../data/appData';
-import { ATTRIBUTE_KEYS, GENERATION_KEYS, STAT_KEYS, type StatLevel } from '../data/schema';
+import { ATTRIBUTE_KEYS, ELEMENT_KEYS, GENERATION_KEYS, STAT_KEYS, type StatLevel } from '../data/schema';
 import { useSearchHotkey } from '../search/useSearchHotkey';
 import { toggled, useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
@@ -8,6 +8,20 @@ import { FilterChip, FilterChipGroup } from '../ui/FilterChip';
 import { LevelToggle } from '../ui/LevelToggle';
 import { Sprite } from '../ui/Sprite';
 import { buildCodexRows, compareRows, defaultDir, maxTotal, type CodexRow, type SortKey } from './codexRows';
+import {
+  advancedCount,
+  cycleResist,
+  elKey,
+  hasAdvancedCriteria,
+  matchesAdvanced,
+  resistState,
+  SKILL_FUNCTIONS,
+  type ResistKey,
+  type ResistState,
+} from './codexFilter';
+import { ATTACK_TYPES } from '../data/skills';
+import type { SpecialFacet } from '../data/search';
+import { SPECIAL_FACETS } from '../filters/specialFacets';
 import styles from './CodexPage.module.css';
 
 const STAT_TITLES: Record<string, string> = {
@@ -97,6 +111,46 @@ const CodexTableRow = memo(function CodexTableRow({
   );
 });
 
+/**
+ * A tri-state resistance chip: off → resists (green ▼) → weak (red ▲) → off.
+ * Reuses the detail-panel ResistanceGrid's marker + colour language (▼ reduced
+ * damage, ▲ extra damage), so colour is never the sole channel and the two
+ * surfaces read as one system. State is announced in the accessible name; the
+ * marker keeps a fixed-width slot so cycling never reflows the chip row.
+ */
+function ResistChip({
+  label,
+  state,
+  onClick,
+}: {
+  label: string;
+  state: ResistState;
+  onClick: () => void;
+}) {
+  const mark = state === 'resist' ? '▼' : state === 'weak' ? '▲' : '';
+  const name =
+    state === 'resist'
+      ? `${label} resistance filter: requiring resistance. Activate to require weakness.`
+      : state === 'weak'
+        ? `${label} resistance filter: requiring weakness. Activate to clear.`
+        : `${label} resistance filter: off. Activate to require resistance.`;
+  return (
+    <button
+      type="button"
+      className={styles.triChip}
+      data-state={state}
+      aria-label={name}
+      title={name}
+      onClick={onClick}
+    >
+      <span className={styles.triMark} aria-hidden="true">
+        {mark}
+      </span>
+      {label}
+    </button>
+  );
+}
+
 export function CodexPage() {
   const openInTree = useStore((s) => s.openInTree);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -111,9 +165,19 @@ export function CodexPage() {
   // Held in the store (not local state) so filters / sort / level persist across
   // switching to the Tree and back — the Codex unmounts each time.
   const patchCodex = useStore((s) => s.patchCodex);
-  const { query, generations: gens, attributes: attrs, level, sortKey, sortDir } = useStore(
-    (s) => s.codex,
-  );
+  const {
+    query,
+    generations: gens,
+    attributes: attrs,
+    level,
+    sortKey,
+    sortDir,
+    skillElements: skillEls,
+    skillTypes,
+    resist,
+    weak,
+    special,
+  } = useStore((s) => s.codex);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -124,20 +188,62 @@ export function CodexPage() {
     const numberQuery = /^\d+$/.test(digits) ? Number(digits) : null;
     const numberMode = numberQuery !== null || q.startsWith('#');
     const dir: 1 | -1 = sortDir === 'asc' ? 1 : -1;
+    const advanced = { skillElements: skillEls, skillTypes, resist, weak, special };
     return rows
       .filter((r) => {
         if (gens.size && !gens.has(r.generation)) return false;
         if (attrs.size && !attrs.has(r.attribute)) return false;
+        if (!matchesAdvanced(r, advanced)) return false;
         if (!q) return true;
         if (numberMode) return numberQuery === null || r.number === numberQuery;
         return r.name.toLowerCase().includes(q);
       })
       .sort((a, b) => compareRows(a, b, sortKey, level, dir));
-  }, [rows, query, gens, attrs, sortKey, sortDir, level]);
+  }, [rows, query, gens, attrs, skillEls, skillTypes, resist, weak, special, sortKey, sortDir, level]);
 
-  const filtering = query.trim() !== '' || gens.size > 0 || attrs.size > 0;
+  const adv = { skillElements: skillEls, skillTypes, resist, weak, special };
+  const advCount = advancedCount(adv);
+  const advActive = hasAdvancedCriteria(adv);
+  const filtering = query.trim() !== '' || gens.size > 0 || attrs.size > 0 || advActive;
   const clearAll = () =>
-    patchCodex({ query: '', generations: new Set(), attributes: new Set() });
+    patchCodex({
+      query: '',
+      generations: new Set(),
+      attributes: new Set(),
+      skillElements: new Set(),
+      skillTypes: new Set(),
+      resist: new Set(),
+      weak: new Set(),
+      special: new Set(),
+    });
+
+  // Advanced facets are opt-in, so the disclosure defaults closed; its open
+  // state persists (localStorage) like the detail-panel Collapse sections.
+  const [advancedOpen, setAdvancedOpen] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('tst.codex.advanced') === '1';
+    } catch {
+      return false;
+    }
+  });
+  const toggleAdvanced = () =>
+    setAdvancedOpen((open) => {
+      const next = !open;
+      try {
+        localStorage.setItem('tst.codex.advanced', next ? '1' : '0');
+      } catch {
+        /* private mode — just won't persist */
+      }
+      return next;
+    });
+  const toggleSkill = (value: string) =>
+    patchCodex({ skillElements: toggled(skillEls, value) });
+  const toggleType = (value: string) => patchCodex({ skillTypes: toggled(skillTypes, value) });
+  const toggleTrait = (value: SpecialFacet) => patchCodex({ special: toggled(special, value) });
+  const cycle = (key: ResistKey) => {
+    const next = cycleResist(resist, weak, key);
+    patchCodex({ resist: next.resist, weak: next.weak });
+  };
 
   // Phone-only: the chip groups collapse behind a toggle to reclaim vertical
   // space above the table. When collapsed, the active facets are summarised
@@ -191,7 +297,7 @@ export function CodexPage() {
   };
 
   return (
-    <section className={styles.page} aria-label="Codex — all Digimon">
+    <section className={styles.page} aria-label="Field guide — all Digimon">
       <div className={styles.toolbar}>
         <div className={styles.toolbarTop}>
           <input
@@ -273,6 +379,98 @@ export function CodexPage() {
             </FilterChipGroup>
           </div>
         </div>
+
+        {/* Advanced, opt-in facets: special-skill element/effect + resistance
+            profile. Collapsed by default so the everyday name/gen/attribute
+            filters stay uncluttered. */}
+        <div className={styles.advanced}>
+          <button
+            type="button"
+            className={styles.advToggle}
+            aria-expanded={advancedOpen}
+            aria-controls="codex-advanced"
+            onClick={toggleAdvanced}
+          >
+            <span className={styles.chevron} aria-hidden="true">
+              {advancedOpen ? '▾' : '▸'}
+            </span>
+            <span className={styles.filterToggleLabel}>Advanced</span>
+            {advCount > 0 && (
+              <span className={styles.advCount} title={`${advCount} advanced filters active`}>
+                {advCount}
+              </span>
+            )}
+          </button>
+
+          <div
+            id="codex-advanced"
+            className={styles.advPanel}
+            data-open={advancedOpen}
+            inert={!advancedOpen}
+          >
+            <div className={styles.advInner}>
+              <div className={styles.advContent}>
+              <FilterChipGroup label="Trait">
+                {SPECIAL_FACETS.map(({ key, label, title }) => (
+                  <FilterChip
+                    key={key}
+                    active={special.has(key)}
+                    title={title}
+                    onClick={() => toggleTrait(key)}
+                  >
+                    {label}
+                  </FilterChip>
+                ))}
+              </FilterChipGroup>
+
+              <FilterChipGroup label="Special skill">
+                {ELEMENT_KEYS.map((el) => (
+                  <FilterChip key={el} active={skillEls.has(el)} onClick={() => toggleSkill(el)}>
+                    {el}
+                  </FilterChip>
+                ))}
+                <span className={styles.chipDivider} aria-hidden="true" />
+                {SKILL_FUNCTIONS.map((fn) => (
+                  <FilterChip key={fn} active={skillEls.has(fn)} onClick={() => toggleSkill(fn)}>
+                    {fn}
+                  </FilterChip>
+                ))}
+              </FilterChipGroup>
+
+              <FilterChipGroup label="Attack type">
+                {ATTACK_TYPES.map((t) => (
+                  <FilterChip key={t} active={skillTypes.has(t)} onClick={() => toggleType(t)}>
+                    {t[0].toUpperCase() + t.slice(1)}
+                  </FilterChip>
+                ))}
+              </FilterChipGroup>
+
+              <div className={styles.resistBlock}>
+                <div className={styles.resistHead}>
+                  <span className="label">Elemental resistance</span>
+                  <span className={styles.resistHint}>
+                    <span className={styles.hintResist}>▼</span> resists ·{' '}
+                    <span className={styles.hintWeak}>▲</span> weak — click to cycle
+                  </span>
+                </div>
+                <div className={styles.resistRow}>
+                  {ELEMENT_KEYS.map((el) => {
+                    const key = elKey(el);
+                    return (
+                      <ResistChip
+                        key={key}
+                        label={el}
+                        state={resistState(resist, weak, key)}
+                        onClick={() => cycle(key)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className={styles.tableWrap}>
@@ -296,7 +494,7 @@ export function CodexPage() {
                 row={r}
                 level={level}
                 sortKey={sortKey}
-                fill={r.total[level] / maxima[level]}
+                fill={(r.total[level]-6000) / (maxima[level]-6000)}
                 onOpen={openInTree}
               />
             ))}

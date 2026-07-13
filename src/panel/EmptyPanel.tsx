@@ -26,7 +26,7 @@ const KEYS: Array<[string, string]> = [
   ['Click', 'Details'],
   ['Double-click  ·  F', 'Focus a full lineage'],
   ['◈', 'Focused lineage'],
-  ['⧉', 'Jogress / DNA fusion'],
+  ['⧉', 'Jogress/DNA fusion'],
   ['◆', 'Item-gated evolution'],
   ['❖', 'Bond form'],
 ];

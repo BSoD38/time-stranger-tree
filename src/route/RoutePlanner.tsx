@@ -110,6 +110,7 @@ export function RoutePlanner() {
   const route = useStore((s) => s.route);
   const swapRoute = useStore((s) => s.swapRoute);
   const setMaxAgentRank = useStore((s) => s.setMaxAgentRank);
+  const setAvoidJogress = useStore((s) => s.setAvoidJogress);
   const setActiveRoute = useStore((s) => s.setActiveRoute);
   const setActiveStep = useStore((s) => s.setActiveStep);
   // Each swap adds a half-turn to the glyph so the flip stays directional
@@ -120,6 +121,13 @@ export function RoutePlanner() {
   const routes = route.routes;
   const active = routes?.[route.active];
   const summary = active && active.steps.length ? summarizeRoute(active.steps) : null;
+  // "Avoid if possible" honesty: the demotion ranks any jogress-free route first,
+  // so if EVERY route still has a jogress step, none exists — say so plainly.
+  const noJogressFree =
+    route.avoidJogress &&
+    !!routes &&
+    routes.length > 0 &&
+    routes.every((r) => r.steps.some((s) => s.class === 'jogress'));
 
   return (
     <Panel>
@@ -162,6 +170,28 @@ export function RoutePlanner() {
             ))}
           </select>
         </label>
+
+        <label className={styles.avoid}>
+          <input
+            type="checkbox"
+            className={styles.avoidInput}
+            checked={route.avoidJogress}
+            onChange={(e) => setAvoidJogress(e.target.checked)}
+          />
+          <span className={styles.avoidBox} aria-hidden="true">
+            <svg viewBox="0 0 12 12" width="11" height="11" focusable="false">
+              <path
+                d="M2.5 6.2 L5 8.6 L9.5 3.4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className={styles.avoidLabel}>Avoid Jogress/DNA evolutions if possible</span>
+        </label>
       </div>
 
       <div className={styles.scroll}>
@@ -173,6 +203,13 @@ export function RoutePlanner() {
           </p>
         ) : (
           <>
+            {noJogressFree && (
+              <p className={styles.avoidNote}>
+                <span aria-hidden="true">⧉</span>
+                No Jogress/DNA-free route exists — showing the path with the fewest Jogress/DNA steps.
+              </p>
+            )}
+
             {routes.length > 1 && (
               <div className={styles.pager}>
                 <button

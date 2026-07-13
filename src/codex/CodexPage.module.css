@@ -176,6 +176,162 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* -----------------------------------------------------------------------------
+   Advanced filters — an opt-in disclosure below the everyday name/gen/attribute
+   controls: filter by special-skill element/effect, and by resistance profile.
+   A quiet zone set off by a hairline; it reveals with a height morph (the global
+   reduced-motion rule snaps it).
+   ----------------------------------------------------------------------------- */
+.advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 9px;
+}
+
+/* Disclosure control — reuses the phone .filterToggle's chevron + label type,
+   but is shown on every viewport (these facets are advanced everywhere). */
+.advToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 3px 2px;
+  background: none;
+  border: none;
+  text-align: left;
+}
+.advToggle:hover .chevron,
+.advToggle[aria-expanded='true'] .chevron,
+.advToggle:hover .filterToggleLabel {
+  color: var(--text);
+}
+
+/* Count of active advanced constraints — keeps the collapsed panel honest. */
+.advCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-display);
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Height morph via 0fr → 1fr (no magic number). The overflow wrapper collapses
+   cleanly with no padding of its own; padding lives on .advContent so focus
+   rings aren't clipped when open. */
+.advPanel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition);
+}
+.advPanel[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+.advInner {
+  min-height: 0;
+  overflow: hidden;
+}
+.advContent {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 12px 6px 6px;
+}
+
+/* Hairline splitting the special-skill facet's elements from its effects. */
+.chipDivider {
+  align-self: stretch;
+  width: 1px;
+  min-height: 18px;
+  margin: 0 3px;
+  background: var(--border);
+}
+
+/* Resistances sub-block: heading + legend, then the elemental / attribute rows. */
+.resistBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.resistHead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.resistRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+.resistHint {
+  font-size: 10.5px;
+  color: var(--text-mute);
+}
+.hintResist {
+  color: var(--resist);
+  font-weight: 700;
+}
+.hintWeak {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* Tri-state resistance chip — mirrors ui/FilterChip's pill, plus green/red
+   resist/weak states that speak the detail-panel ResistanceGrid's language
+   (▼ resists · ▲ weak). The marker keeps a fixed slot so cycling never reflows. */
+.triChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-dim);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+.triMark {
+  min-width: 8px;
+  font-size: 8px;
+  line-height: 1;
+  text-align: center;
+}
+.triChip[data-state='off']:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.triChip[data-state='resist'] {
+  color: var(--resist);
+  border-color: color-mix(in oklab, var(--resist) 55%, var(--border));
+  background: color-mix(in oklab, var(--resist) 15%, transparent);
+}
+.triChip[data-state='resist']:hover {
+  background: color-mix(in oklab, var(--resist) 22%, transparent);
+}
+.triChip[data-state='weak'] {
+  color: var(--danger);
+  border-color: color-mix(in oklab, var(--danger) 55%, var(--border));
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+.triChip[data-state='weak']:hover {
+  background: color-mix(in oklab, var(--danger) 22%, transparent);
+}
+
 @media (pointer: coarse) {
   .clear {
     min-height: 36px;
@@ -183,6 +339,14 @@
   .search {
     min-height: 44px;
     font-size: 16px; /* ≥16px so iOS doesn't zoom on focus */
+  }
+  .advToggle {
+    min-height: 40px;
+  }
+  .triChip {
+    min-height: 36px;
+    padding-top: 7px;
+    padding-bottom: 7px;
   }
 }
 

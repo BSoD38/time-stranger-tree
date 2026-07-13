@@ -1,4 +1,4 @@
-import type { Attribute, DigimonDatabase, Generation } from './schema';
+import type { Attribute, Digimon, DigimonDatabase, Generation } from './schema';
 
 export interface SearchEntry {
   slug: string;
@@ -64,6 +64,19 @@ export function hasActiveCriteria(f: FilterCriteria): boolean {
   return Boolean(f.generations?.size || f.attributes?.size || f.special?.size);
 }
 
+/** The set of special "trait" facets a Digimon satisfies. Single source of truth
+ *  for what item / jogress / bond / ridable mean, shared by the Tree filter and
+ *  the Field Guide's advanced filters. */
+export function digimonTraits(d: Digimon): Set<SpecialFacet> {
+  const traits = new Set<SpecialFacet>();
+  const cond = d.evolutionCondition;
+  if (cond.requiredItem) traits.add('item');
+  if (cond.jogressPartners) traits.add('jogress');
+  if (cond.agentSkills) traits.add('bond');
+  if (d.ridable) traits.add('ridable');
+  return traits;
+}
+
 /** OR within a facet, AND across facets. Empty facet = no constraint. */
 export function filterSlugs(db: DigimonDatabase, f: FilterCriteria): Set<string> {
   const result = new Set<string>();
@@ -71,12 +84,14 @@ export function filterSlugs(db: DigimonDatabase, f: FilterCriteria): Set<string>
     if (f.generations?.size && !f.generations.has(d.generation)) continue;
     if (f.attributes?.size && !f.attributes.has(d.attribute)) continue;
     if (f.special?.size) {
-      const cond = d.evolutionCondition;
-      const matches =
-        (f.special.has('item') && Boolean(cond.requiredItem)) ||
-        (f.special.has('jogress') && Boolean(cond.jogressPartners)) ||
-        (f.special.has('bond') && Boolean(cond.agentSkills)) ||
-        (f.special.has('ridable') && d.ridable);
+      const traits = digimonTraits(d);
+      let matches = false;
+      for (const facet of f.special) {
+        if (traits.has(facet)) {
+          matches = true;
+          break;
+        }
+      }
       if (!matches) continue;
     }
     result.add(d.slug);

@@ -29,7 +29,7 @@ function microSummary(target: Digimon): string {
   }
   if (cond.talent) parts.push(`Tal ${cond.talent.value}`);
   if (cond.requiredItem) parts.push('◆ item');
-  if (cond.jogressPartners) parts.push('⧉ jogress');
+  if (cond.jogressPartners) parts.push('⧉ Jogress/DNA');
   if (cond.agentSkills) parts.push('❖ bond');
   return parts.slice(0, 4).join(' · ');
 }

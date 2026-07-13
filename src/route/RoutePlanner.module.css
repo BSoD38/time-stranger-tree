@@ -169,6 +169,90 @@
   font-size: 12px;
 }
 
+/* "Avoid DNA/jogress" toggle. First checkbox in the app: a native input drives
+   semantics + keyboard, with the visible box drawn as its sibling so the checked
+   state can carry the live accent — the selected Digimon's signature colour, so
+   the control sweeps hue with the rest of the UI (accent morph lives on :root). */
+.avoid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  user-select: none;
+}
+
+.avoidInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.avoidBox {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: transparent; /* hides the check until :checked flips it in */
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.avoidBox svg {
+  transform: scale(0.5);
+  transition: transform var(--transition-fast);
+}
+
+.avoid:hover .avoidBox {
+  border-color: var(--accent);
+}
+
+.avoidInput:checked + .avoidBox {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink); /* the check, on the accent fill (flips per theme) */
+}
+
+.avoidInput:checked + .avoidBox svg {
+  transform: scale(1);
+}
+
+.avoidInput:focus-visible + .avoidBox {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.avoidLabel {
+  line-height: 1.3;
+}
+
+/* Shown only when "avoid" is on but every route still needs a jogress step. */
+.avoidNote {
+  display: flex;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text);
+  background: color-mix(in oklch, var(--jogress) 12%, transparent);
+  border: 1px solid color-mix(in oklch, var(--jogress) 45%, var(--border));
+  border-radius: var(--radius-sm);
+}
+
+.avoidNote span {
+  color: var(--jogress);
+}
+
 .scroll {
   flex: 1;
   overflow-y: auto;
@@ -242,6 +326,9 @@
     min-height: 40px;
   }
   .rank select {
+    min-height: 40px;
+  }
+  .avoid {
     min-height: 40px;
   }
   .swap {

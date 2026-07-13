@@ -57,6 +57,48 @@ describe('route planner (synthetic cost behavior)', () => {
     }
   });
 
+  // jogress shortcut s->j->t (2 hops) vs a jogress-free detour s->p1..p4->t (5 hops).
+  // Even with the default jogress surcharge the shortcut is cheaper, so it wins by
+  // default — which is exactly what `avoidJogress` should flip.
+  const gj = buildGraph(makeDb({
+    s: { evolvesTo: ['j', 'p1'] },
+    j: {
+      evolvesTo: ['t'],
+      condition: { jogressPartners: [{ slug: 's', name: 's', personality: 'Daring' }] },
+    },
+    p1: { evolvesTo: ['p2'] },
+    p2: { evolvesTo: ['p3'] },
+    p3: { evolvesTo: ['p4'] },
+    p4: { evolvesTo: ['t'] },
+    t: {},
+  }));
+
+  it('by default the cheaper jogress shortcut wins', () => {
+    const [best] = findRoutes(gj, 's', 't');
+    expect(best.steps.some((s) => s.class === 'jogress')).toBe(true);
+  });
+
+  it('avoidJogress demotes jogress so a jogress-free route ranks first', () => {
+    const [best] = findRoutes(gj, 's', 't', { avoidJogress: true });
+    expect(best.steps.some((s) => s.class === 'jogress')).toBe(false);
+    expect(best.steps.map((s) => s.to)).toEqual(['p1', 'p2', 'p3', 'p4', 't']);
+  });
+
+  it('avoidJogress still keeps jogress reachable as the visible alternative', () => {
+    const routes = findRoutes(gj, 's', 't', { avoidJogress: true });
+    expect(routes.some((r) => r.steps.some((s) => s.class === 'jogress'))).toBe(true);
+  });
+
+  it('avoidJogress falls back to jogress when it is the only way', () => {
+    const only = buildGraph(makeDb({
+      x: { evolvesTo: ['jt'] },
+      jt: { condition: { jogressPartners: [{ slug: 'x', name: 'x', personality: 'Daring' }] } },
+    }));
+    const routes = findRoutes(only, 'x', 'jt', { avoidJogress: true });
+    expect(routes).toHaveLength(1);
+    expect(routes[0].steps[0].class).toBe('jogress');
+  });
+
   it('maxAgentRank gates digivolve arcs only', () => {
     const g2 = buildGraph(makeDb({
       lo: { evolvesTo: ['hi'] },
@@ -79,6 +121,14 @@ describe('route planner (real-data locks)', () => {
     expect(best.steps[0].class).toBe('jogress');
     const partners = best.steps[0].requirement!.partners!;
     expect(partners.map((p) => p.slug)).toEqual(['ankylomon']);
+  });
+
+  it('avoidJogress routes around shakkoumon’s jogress step via devolve/re-evolve', () => {
+    // Default: the direct 1-step jogress (locked above). With avoidJogress the
+    // planner finds a longer jogress-free way in — a real end-to-end demotion.
+    const [avoided] = findRoutes(g, 'angemon', 'shakkoumon', { avoidJogress: true });
+    expect(avoided.steps.some((s) => s.class === 'jogress')).toBe(false);
+    expect(avoided.to).toBe('shakkoumon');
   });
 
   it('veemon → magnamon is one item step (Digi-Egg of Miracles)', () => {

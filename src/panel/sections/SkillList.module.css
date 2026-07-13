@@ -31,6 +31,15 @@
   color: var(--accent);
 }
 
+/* Attack type (magic / physical) — quiet companion to the accent element word;
+   text-only and neutral so it reads as metadata, not a second colour system.
+   --text-dim (not --text-mute) to clear AA on the small label over the card. */
+.type {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-transform: capitalize;
+}
+
 .level {
   margin-left: auto;
   font-size: 10.5px;

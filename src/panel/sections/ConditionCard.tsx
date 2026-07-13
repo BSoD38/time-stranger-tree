@@ -37,7 +37,7 @@ export function ConditionCard({ condition, basePersonality }: ConditionCardProps
       </div>
       {condition.jogressPartners && (
         <div className={styles.partners}>
-          <div className={`label ${styles.partnerLabel}`}>Jogress with</div>
+          <div className={`label ${styles.partnerLabel}`}>Jogress/DNA with</div>
           {condition.jogressPartners.map((partner) => (
             <MonRow
               key={partner.slug}
@@ -59,8 +59,8 @@ export function ConditionCard({ condition, basePersonality }: ConditionCardProps
       </div>
       <div className={styles.caption}>
         Requirements to evolve into this Digimon (from any pre-evolution). When the source Digimon
-        shares this base personality and has the matching Agent Skills, the stat requirements are
-        reduced — rank and Agent Skill thresholds are unchanged.
+        shares this base personality and you have the matching Agent Skills, the stat requirements are
+        reduced. Agent rank and Agent Skill conditions are unchanged.
       </div>
     </div>
   );

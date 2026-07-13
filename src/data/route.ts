@@ -62,6 +62,16 @@ export const DEFAULT_COSTS: CostTable = {
   jogressSurcharge: 200,
 };
 
+/**
+ * Jogress surcharge applied when `avoidJogress` is on. It's a penalty, not a
+ * ban: jogress edges stay reachable so a route still surfaces when jogress is
+ * the only way ("if possible"). The value must exceed the cost of ANY whole
+ * jogress-free path so a single jogress step always outweighs any jogress-free
+ * detour — the graph has a few hundred nodes and no edge costs more than
+ * evolve + itemSurcharge (255), bounding a loopless path well under 1e6.
+ */
+export const AVOID_JOGRESS_SURCHARGE = 1_000_000;
+
 export interface RouteStep {
   from: string;
   to: string;
@@ -93,6 +103,9 @@ export interface RoutePlannerOptions {
   costs?: Partial<CostTable>;
   /** Skip digivolve arcs whose target demands a higher agent rank (start node exempt; devolves unaffected). */
   maxAgentRank?: number;
+  /** Heavily penalise jogress/DNA steps so jogress-free routes always rank first,
+   *  while keeping jogress reachable as a fallback when it's the only way. */
+  avoidJogress?: boolean;
 }
 
 interface Arc { to: string; kind: StepKind; cost: number; }
@@ -244,6 +257,10 @@ export function findRoutes(
   if (!g.db.digimon[to]) throw new Error(`Unknown slug: ${to}`);
   const k = opts.k ?? 3;
   const costs: CostTable = { ...DEFAULT_COSTS, ...opts.costs };
+  if (opts.avoidJogress) {
+    // Math.max so an explicit Infinity surcharge (hard exclude) still wins.
+    costs.jogressSurcharge = Math.max(costs.jogressSurcharge, AVOID_JOGRESS_SURCHARGE);
+  }
 
   if (from === to) {
     return [{ from, to, steps: [], totalCost: 0 }];

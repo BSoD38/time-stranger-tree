@@ -45,6 +45,9 @@ export interface RouteState {
   from: string | null;
   to: string | null;
   maxAgentRank: number | null;
+  /** Prefer routes with no jogress/DNA step, falling back to jogress only when
+   *  there's no other way. Off by default. Session-only (not URL-persisted). */
+  avoidJogress: boolean;
   routes: Route[] | null;
   active: number;
   activeStep: number | null;
@@ -54,6 +57,7 @@ const emptyRoute: RouteState = {
   from: null,
   to: null,
   maxAgentRank: null,
+  avoidJogress: false,
   routes: null,
   active: 0,
   activeStep: null,
@@ -68,6 +72,17 @@ export interface CodexState {
   level: StatLevel;
   sortKey: CodexSortKey;
   sortDir: 'asc' | 'desc';
+  // Advanced facets (see codex/codexFilter). The special-skill facet has two
+  // sub-facets — `skillElements` (element/effect keys) and `skillTypes`
+  // (magic/physical) — combined same-skill. `resist` / `weak` hold namespaced
+  // resistance keys (`el:*`) — a key lives in at most one of the two.
+  skillElements: ReadonlySet<string>;
+  skillTypes: ReadonlySet<string>;
+  resist: ReadonlySet<string>;
+  weak: ReadonlySet<string>;
+  // Trait facets (item / jogress / bond / ridable) — the same set the Tree filter
+  // offers, mirrored into the Field Guide's advanced filters. OR within.
+  special: ReadonlySet<SpecialFacet>;
 }
 
 const emptyCodex: CodexState = {
@@ -77,6 +92,11 @@ const emptyCodex: CodexState = {
   level: 'lv99',
   sortKey: 'number',
   sortDir: 'asc',
+  skillElements: new Set(),
+  skillTypes: new Set(),
+  resist: new Set(),
+  weak: new Set(),
+  special: new Set(),
 };
 
 /** Top-level surface: the evolution graph, or the flat Codex table. */
@@ -121,6 +141,7 @@ export interface AppState {
   setRouteEndpoint(which: 'from' | 'to', slug: string | null): void;
   swapRoute(): void;
   setMaxAgentRank(value: number | null): void;
+  setAvoidJogress(value: boolean): void;
   setActiveRoute(index: number): void;
   setActiveStep(index: number | null): void;
 }
@@ -138,6 +159,7 @@ function computeRoutes(route: RouteState): RouteState {
   const routes = findRoutes(appData().graph, route.from, route.to, {
     k: 3,
     maxAgentRank: route.maxAgentRank ?? undefined,
+    avoidJogress: route.avoidJogress,
   });
   return { ...route, routes, active: 0, activeStep: null };
 }
@@ -202,6 +224,8 @@ export const useStore = create<AppState>()(
     },
     setMaxAgentRank: (value) =>
       set({ route: computeRoutes({ ...get().route, maxAgentRank: value }) }),
+    setAvoidJogress: (value) =>
+      set({ route: computeRoutes({ ...get().route, avoidJogress: value }) }),
     setActiveRoute: (index) =>
       set({ route: { ...get().route, active: index, activeStep: null } }),
     setActiveStep: (index) => set({ route: { ...get().route, activeStep: index } }),

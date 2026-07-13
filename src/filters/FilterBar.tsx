@@ -1,17 +1,11 @@
 import { appData } from '../data/appData';
 import { ATTRIBUTE_KEYS } from '../data/schema';
-import { filterSlugs, hasActiveCriteria, type SpecialFacet } from '../data/search';
+import { filterSlugs, hasActiveCriteria } from '../data/search';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
 import { FilterChip, FilterChipGroup } from '../ui/FilterChip';
+import { SPECIAL_FACETS } from './specialFacets';
 import styles from './FilterBar.module.css';
-
-const SPECIAL: Array<{ key: SpecialFacet; label: string; title: string }> = [
-  { key: 'ridable', label: '🐎 Ridable', title: '189 ridable Digimon' },
-  { key: 'item', label: '◆ Item', title: 'Requires an item to evolve into (18)' },
-  { key: 'jogress', label: '⧉ Jogress', title: 'DNA/Jogress fusion (17)' },
-  { key: 'bond', label: '❖ Bond', title: 'Bond form — Agent Skills requirement (11)' },
-];
 
 export function FilterBar() {
   const attributes = useStore((s) => s.attributes);
@@ -42,7 +36,7 @@ export function FilterBar() {
         ))}
       </FilterChipGroup>
       <FilterChipGroup label="Trait">
-        {SPECIAL.map(({ key, label, title }) => (
+        {SPECIAL_FACETS.map(({ key, label, title }) => (
           <FilterChip
             key={key}
             active={special.has(key)}
