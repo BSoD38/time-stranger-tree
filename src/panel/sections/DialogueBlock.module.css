@@ -8,7 +8,7 @@
 .player {
   padding: 6px 10px;
   border-radius: var(--radius-md);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 1.5;
 }
 
@@ -31,6 +31,6 @@
 /* extends the global `.label` utility */
 .speaker {
   display: block;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   margin-bottom: 2px;
 }

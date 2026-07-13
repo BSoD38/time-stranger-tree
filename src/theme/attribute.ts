@@ -34,6 +34,7 @@ export interface GraphPalette {
   text: string;
   textDim: string; // node labels
   edge: string;
+  edgeOpacity: number; // base (context) edge opacity — lower on light so the full-graph lineage web doesn't read as a busy cross-hatch on parchment
   accent: string;
   accent2: string; // ancestry (evolves-from) lineage links
   routeEvolve: string; // glowing evolve path / descendant lineage links
@@ -56,6 +57,7 @@ export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
     text: '#f0eeeb',
     textDim: '#aeaaa5',
     edge: '#5a544e',
+    edgeOpacity: 0.5,
     accent: '#f5b845', // default brand amber (per-node glow overrides via data)
     accent2: '#45bcd6',
     routeEvolve: '#f5b845',
@@ -75,7 +77,8 @@ export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
     border: '#c3baac',
     text: '#2b2721',
     textDim: '#6b6459',
-    edge: '#857b6a', // warm graphite line — reads on paper at 0.5 opacity
+    edge: '#857b6a', // warm graphite line
+    edgeOpacity: 0.32, // quieter on parchment — at 0.5 the full-graph lineage web read as a busy grey cross-hatch
     accent: '#c07f0d',
     accent2: '#1c86a3', // deep cyan ancestry links
     routeEvolve: '#b9790a', // deep ochre-amber path, saturated for paper

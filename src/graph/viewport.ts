@@ -38,9 +38,14 @@ export function reorientGraph(cy: Core, orientation: Orientation): void {
  * preserved; within a band, members are re-sequenced to minimise the link
  * crossings on screen, seeded by — and never regressing past — the base order.
  */
-export function compactFocus(cy: Core, focusSlug: string, orientation: Orientation): void {
+export function compactFocus(
+  cy: Core,
+  focusSlug: string,
+  orientation: Orientation,
+  excluded: ReadonlySet<string> = new Set(),
+): void {
   const { graph, layout } = appData();
-  const lin = lineage(graph, focusSlug);
+  const lin = lineage(graph, focusSlug, excluded);
   const byGen = new Map<number, string[]>();
   for (const slug of lin.nodes) {
     const base = layout.positions[slug];

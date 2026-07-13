@@ -11,7 +11,7 @@
   border-radius: var(--radius-md);
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: var(--fs-md);
   outline: none;
   transition:
     border-color var(--transition-fast),
@@ -22,7 +22,7 @@
 @media (pointer: coarse) {
   .input {
     min-height: 44px;
-    font-size: 16px;
+    font-size: var(--fs-input);
   }
 }
 
@@ -53,13 +53,13 @@
 
 .hint {
   padding: 5px 11px;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   color: var(--text-mute);
   border-top: 1px solid var(--border);
 }
 
 .noResults {
   padding: 12px 12px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--text-dim);
 }

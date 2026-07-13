@@ -7,6 +7,7 @@ export type Theme = 'light' | 'dark';
 const KEY = 'tst.theme';
 const listeners = new Set<(t: Theme) => void>();
 let current: Theme = 'dark';
+let themingTimer = 0;
 
 function systemPref(): Theme {
   return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
@@ -26,7 +27,17 @@ export function getTheme(): Theme {
 
 export function setTheme(theme: Theme): void {
   current = theme;
-  document.documentElement.setAttribute('data-theme', theme);
+  const root = document.documentElement;
+  // Cross-fade the neutral palette on toggle only (a `data-theming` window), so the
+  // whole page doesn't hard-snap between light and dark — without paying a color
+  // transition on every hover/press during normal use. Skipped under reduced motion.
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  if (!reduce) {
+    root.setAttribute('data-theming', '');
+    window.clearTimeout(themingTimer);
+    themingTimer = window.setTimeout(() => root.removeAttribute('data-theming'), 340);
+  }
+  root.setAttribute('data-theme', theme);
   localStorage.setItem(KEY, theme);
   listeners.forEach((l) => l(theme));
 }

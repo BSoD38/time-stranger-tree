@@ -8,7 +8,7 @@
 
 .groupLabel {
   margin-right: 3px;
-  font-size: 9.5px;
+  font-size: var(--fs-micro);
   letter-spacing: 0.7px;
   color: var(--text-mute);
 }
@@ -25,7 +25,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   font-family: var(--font-display);
   white-space: nowrap;

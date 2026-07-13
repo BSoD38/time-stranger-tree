@@ -31,7 +31,7 @@
   color: oklch(0.96 0.004 75);
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--fs-md);
   white-space: nowrap;
   box-shadow: 0 8px 30px color-mix(in oklab, var(--cel) 32%, transparent);
   animation: pop 2.4s cubic-bezier(0.22, 0.7, 0.28, 1) forwards;
@@ -39,7 +39,7 @@
 
 .star {
   color: var(--cel);
-  font-size: 15px;
+  font-size: var(--fs-lg);
 }
 
 @keyframes glow {
@@ -89,18 +89,13 @@
   .glow {
     display: none;
   }
+  /* No CSS animation to convey the hold — the global reduced-motion rule zeroes
+     animation-duration, which would drop the toast to its final (opacity 0) frame
+     and make the celebration invisible. Show it statically instead; the component's
+     own 2.4s timeout unmounts it. */
   .toast {
-    animation: fade 2.4s linear forwards;
+    animation: none;
+    opacity: 1;
     transform: translateX(-50%);
-  }
-  @keyframes fade {
-    0%,
-    100% {
-      opacity: 0;
-    }
-    10%,
-    85% {
-      opacity: 1;
-    }
   }
 }

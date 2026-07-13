@@ -5,6 +5,7 @@ import { loadDatabase } from './data/load';
 import { preloadAtlas } from './data/atlas';
 import { FilterBar } from './filters/FilterBar';
 import { GraphCanvas } from './graph/GraphCanvas';
+import { HiddenBranches } from './graph/HiddenBranches';
 import { Celebration } from './route/Celebration';
 import { DetailPanel } from './panel/DetailPanel';
 import { EmptyPanel } from './panel/EmptyPanel';
@@ -297,7 +298,13 @@ export default function App() {
           <ThemeToggle />
         </div>
       </header>
-      {view === 'graph' && filtersOpen && <FilterBar />}
+      {view === 'graph' && (
+        <div className={styles.filterReveal} data-open={filtersOpen}>
+          <div className={styles.filterRevealInner} inert={!filtersOpen}>
+            <FilterBar />
+          </div>
+        </div>
+      )}
       <div className={styles.body}>
         {/* Kept mounted under the Codex so Cytoscape retains its viewport; `inert`
             drops the covered surface out of the tab order and the a11y tree. */}
@@ -305,6 +312,7 @@ export default function App() {
           <main className={styles.canvas}>
             <GraphCanvas />
             <Celebration />
+            <HiddenBranches />
             <div className={styles.legend}>
               <span className={styles.legendTitle}>Attribute</span>
               {ATTRIBUTE_KEYS.map((attribute) => (

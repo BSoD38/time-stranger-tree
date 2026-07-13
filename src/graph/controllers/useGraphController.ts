@@ -10,6 +10,8 @@ import type { Core } from 'cytoscape';
 const APPEARANCE_CLASSES =
   'sel dim-soft dim-hard dim-filter hidden lineage-next lineage-prev lineage-prev-thin filter-mute route-dim route-glow route-glow-devolve route-node route-step-active';
 
+const NO_EXCLUSIONS: ReadonlySet<string> = new Set();
+
 const prefersReduce = (): boolean =>
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
@@ -79,10 +81,16 @@ function manageRouteFlow(): void {
  * `lineage-next` for edges leading away from the anchor toward its descendants
  * (evolves-to), `lineage-prev` for edges from its ancestors (evolves-from).
  */
-function paintLineage(cy: Core, anchor: string, outsideClass: string, thinPrev = false): void {
+function paintLineage(
+  cy: Core,
+  anchor: string,
+  outsideClass: string,
+  excluded: ReadonlySet<string>,
+  thinPrev = false,
+): void {
   const graph = appData().graph;
-  const lin = lineage(graph, anchor);
-  const forward = descendants(graph, anchor); // reachable via evolves-to
+  const lin = lineage(graph, anchor, excluded);
+  const forward = descendants(graph, anchor, excluded); // reachable via evolves-to
   cy.nodes().forEach((n) => {
     if (!lin.nodes.has(n.id())) n.addClass(outsideClass);
   });
@@ -116,11 +124,19 @@ function recompute(state: AppState): void {
     // outright (display:none); otherwise it's hard-dimmed to a faint context.
     // Inside the lineage, edges are coloured by direction relative to the anchor.
     if (state.focus) {
-      // in the isolated (hide) focus view, de-emphasise the ancestry links a touch
-      paintLineage(cy, state.focus, state.hideOthers ? 'hidden' : 'dim-hard', state.hideOthers);
+      // in the isolated (hide) focus view, de-emphasise the ancestry links a touch.
+      // Excluded branches are pruned from the lineage entirely (treated as absent).
+      paintLineage(
+        cy,
+        state.focus,
+        state.hideOthers ? 'hidden' : 'dim-hard',
+        state.lineageExcluded,
+        state.hideOthers,
+      );
     } else if (state.selected) {
-      // soft lineage highlight only outside focus mode
-      paintLineage(cy, state.selected, 'dim-soft');
+      // soft lineage highlight only outside focus mode — shows the full family
+      // (branch-pruning is a focus-mode tool, so no exclusions here)
+      paintLineage(cy, state.selected, 'dim-soft', NO_EXCLUSIONS);
     }
 
     // filter layer. In the normal tree view a filter isolates: non-matches are
@@ -207,12 +223,15 @@ function centerNode(cy: Core, node: ReturnType<Core['$id']>, zoom: number, anima
 function frameGraph(cy: Core, animate = true): void {
   const state = useStore.getState();
   const o = state.orientation;
+  // Under reduced motion the camera jumps to its target instead of gliding — the
+  // fit/pan/zoom moves below are decorative travel, not state the user must see.
+  const anim = animate && !prefersReduce();
   const route = state.routeOpen ? state.route.routes?.[state.route.active] : undefined;
 
   if (state.focus) {
-    if (state.hideOthers) compactFocus(cy, state.focus, o);
+    if (state.hideOthers) compactFocus(cy, state.focus, o, state.lineageExcluded);
     else reorientGraph(cy, o);
-    fitEles(cy, lineage(appData().graph, state.focus).nodes, 60, animate);
+    fitEles(cy, lineage(appData().graph, state.focus, state.lineageExcluded).nodes, 60, anim);
     return;
   }
 
@@ -221,7 +240,7 @@ function frameGraph(cy: Core, animate = true): void {
     // staircase, "dim others" leaves it in place within the full graph.
     if (state.hideOthers) compactRoute(cy, route, o);
     else reorientGraph(cy, o);
-    fitEles(cy, new Set([route.from, ...route.steps.map((s) => s.to)]), 80, animate);
+    fitEles(cy, new Set([route.from, ...route.steps.map((s) => s.to)]), 80, anim);
     return;
   }
 
@@ -233,7 +252,7 @@ function frameGraph(cy: Core, animate = true): void {
   // we'd fall through to the selection anchor below and pan the viewport onto a
   // stale position, parking the graph in empty space.
   if (state.routeOpen) {
-    resetView(cy, o, animate);
+    resetView(cy, o, anim);
     return;
   }
 
@@ -243,15 +262,15 @@ function frameGraph(cy: Core, animate = true): void {
   if (hasActiveCriteria(criteria)) {
     const matching = filterSlugs(appData().db, criteria);
     compactFilter(cy, matching, o);
-    fitEles(cy, matching, 60, animate);
+    fitEles(cy, matching, 60, anim);
     return;
   }
 
   const anchor = state.selected ? cy.$id(state.selected) : null;
   if (anchor?.length) {
-    centerNode(cy, anchor, 0.6, animate);
+    centerNode(cy, anchor, 0.6, anim);
   } else {
-    resetView(cy, o, animate);
+    resetView(cy, o, anim);
   }
 }
 
@@ -261,7 +280,16 @@ export function useGraphController(): void {
       // appearance: any of these slices changes → one full recompute
       useStore.subscribe(
         (s) =>
-          [s.selected, s.focus, s.hideOthers, s.attributes, s.special, s.route, s.routeOpen] as const,
+          [
+            s.selected,
+            s.focus,
+            s.hideOthers,
+            s.attributes,
+            s.special,
+            s.route,
+            s.routeOpen,
+            s.lineageExcluded,
+          ] as const,
         () => {
           recompute(useStore.getState());
           manageRouteFlow(); // (re)bind the flow to the current active-step edge
@@ -299,7 +327,12 @@ export function useGraphController(): void {
           const z = cy.zoom() < 0.4 ? 0.8 : cy.zoom();
           const p = node.position();
           const pan = { x: cy.width() / 2 - p.x * z, y: cy.height() / 2 - p.y * z };
-          cy.animate({ zoom: z, pan, duration: 300, easing: 'ease-out-cubic' });
+          if (prefersReduce()) {
+            cy.zoom(z);
+            cy.pan(pan);
+          } else {
+            cy.animate({ zoom: z, pan, duration: 300, easing: 'ease-out-cubic' });
+          }
         },
       ),
 
@@ -313,6 +346,7 @@ export function useGraphController(): void {
             s.orientation,
             s.attributes,
             s.special,
+            s.lineageExcluded,
             s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
           ] as const,
         () => {
@@ -324,10 +358,14 @@ export function useGraphController(): void {
     ];
     recompute(useStore.getState());
     manageRouteFlow();
-    // a deep-linked focus or route is set before we subscribe — frame it once on mount
+    // A deep-linked focus / route / selection is set before we subscribe — frame it
+    // once on mount. Selection is included so a cold #/d/<slug> link (or a refresh)
+    // centres the node instead of parking the graph at the overview with the node
+    // stranded in a corner; the pan-to-selection subscription only fires on later
+    // changes, never the initial value.
     const cy = getCy();
     const s0 = useStore.getState();
-    if (cy && (s0.focus || s0.routeOpen)) frameGraph(cy, false);
+    if (cy && (s0.focus || s0.routeOpen || s0.selected)) frameGraph(cy, false);
     return () => {
       unsubscribers.forEach((u) => u());
       if (flowRAF) {

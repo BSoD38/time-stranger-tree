@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { appData } from '../data/appData';
+import { lineage } from '../data/graph';
 import { iconUrl } from '../data/load';
 import { useStore } from '../state/store';
 import { ATTRIBUTE_COLORS } from '../theme/attribute';
@@ -21,10 +22,22 @@ export function DetailPanel({ slug }: { slug: string }) {
   const setFocus = useStore((s) => s.setFocus);
   const openRoute = useStore((s) => s.openRoute);
   const focus = useStore((s) => s.focus);
+  const lineageExcluded = useStore((s) => s.lineageExcluded);
+  const excludeFromLineage = useStore((s) => s.excludeFromLineage);
   const digimon = appData().db.digimon[slug];
   const [descExpanded, setDescExpanded] = useState(false);
 
   useEffect(() => setDescExpanded(false), [slug]);
+
+  // A branch can be pruned only while focused, and only for a member of the
+  // focused lineage that isn't the focus itself.
+  const canHideBranch = useMemo(
+    () =>
+      focus != null &&
+      slug !== focus &&
+      lineage(appData().graph, focus, lineageExcluded).nodes.has(slug),
+    [focus, lineageExcluded, slug],
+  );
 
   return (
     <Panel>
@@ -61,6 +74,15 @@ export function DetailPanel({ slug }: { slug: string }) {
         >
           ◈ {focus === slug ? 'Unfocus' : 'Focus lineage'}
         </SegButton>
+        {canHideBranch && (
+          <SegButton
+            size="sm"
+            onClick={() => excludeFromLineage(slug)}
+            title="Remove this Digimon — and any line reached only through it — from the focused lineage"
+          >
+            ⊘ Hide branch
+          </SegButton>
+        )}
         <SegButton size="sm" onClick={() => openRoute({ from: slug })}>
           Route from
         </SegButton>
@@ -70,13 +92,15 @@ export function DetailPanel({ slug }: { slug: string }) {
       </div>
 
       <div className={styles.scroll}>
-        <p
+        <button
+          type="button"
           className={descExpanded ? styles.descFull : styles.desc}
           onClick={() => setDescExpanded(!descExpanded)}
-          title={descExpanded ? undefined : 'Click to expand'}
+          aria-expanded={descExpanded}
+          title={descExpanded ? 'Collapse' : 'Expand'}
         >
           {digimon.description}
-        </p>
+        </button>
 
         <ConditionCard
           condition={digimon.evolutionCondition}

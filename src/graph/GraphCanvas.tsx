@@ -104,5 +104,15 @@ export function GraphCanvas() {
 
   useGraphController();
 
-  return <div ref={ref} style={{ width: '100%', height: '100%' }} />;
+  // The graph is a pointer-driven <canvas>: its nodes aren't in the DOM or the
+  // a11y tree. Label the region and point assistive-tech / keyboard users at the
+  // paths that ARE accessible (search and the Field guide table).
+  return (
+    <div
+      ref={ref}
+      role="img"
+      aria-label="Evolution graph — a visual network of all 475 Digimon. This view is pointer-driven; use the search field (press /) or the Field guide table to find and open a Digimon."
+      style={{ width: '100%', height: '100%' }}
+    />
+  );
 }

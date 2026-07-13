@@ -23,11 +23,11 @@
 
 .name {
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
 }
 
 .element {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--accent);
 }
 
@@ -35,26 +35,26 @@
    text-only and neutral so it reads as metadata, not a second colour system.
    --text-dim (not --text-mute) to clear AA on the small label over the card. */
 .type {
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
   text-transform: capitalize;
 }
 
 .level {
   margin-left: auto;
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   color: var(--text-dim);
 }
 
 .numbers {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   font-variant-numeric: tabular-nums;
   margin: 2px 0;
 }
 
 .desc {
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   color: var(--text-dim);
   line-height: 1.45;
 }

@@ -24,8 +24,12 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
   return (
     <div
       className={`${styles.card} ${active ? styles.active : ''} ${isEvolve ? styles.evolve : styles.devolve}`}
+      tabIndex={0}
+      aria-label={`Step ${index + 1}: ${isEvolve ? 'Digivolve' : 'De-Digivolve'} ${from.name} to ${to.name}`}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
+      onFocus={() => onHover(true)}
+      onBlur={() => onHover(false)}
     >
       <div className={`label ${styles.kind}`}>
         {index + 1}. {isEvolve ? '▲ Digivolve' : '▼ De-Digivolve'}

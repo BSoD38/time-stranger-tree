@@ -112,7 +112,7 @@ export function buildStylesheet(palette: GraphPalette): StyleRule[] {
         width: 1.5,
         'curve-style': 'straight',
         'line-color': palette.edge,
-        'line-opacity': 0.5,
+        'line-opacity': palette.edgeOpacity,
         'target-arrow-shape': 'triangle',
         'target-arrow-color': palette.edge,
         'arrow-scale': 0.95,

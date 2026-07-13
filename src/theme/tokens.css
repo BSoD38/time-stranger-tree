@@ -43,7 +43,7 @@
   --border-strong: oklch(0.4 0.011 66);
   --text: oklch(0.95 0.004 75);
   --text-dim: oklch(0.745 0.008 72);
-  --text-mute: oklch(0.6 0.008 72);
+  --text-mute: oklch(0.64 0.008 72); /* ≥4.5:1 on surface-2 for the small muted labels (WCAG AA) */
 
   /* -- "Digital World" graph viewport + its floating legend chip. Themed:
         night (dark) below, daylight parchment in the light override. Keep
@@ -64,6 +64,21 @@
   --font-display: 'Hanken Grotesk', system-ui, sans-serif;
   --font-body: 'Hanken Grotesk', system-ui, sans-serif;
   --font-brand: 'Chakra Petch', 'Hanken Grotesk', system-ui, sans-serif;
+
+  /* -- Type scale. A dense product UI legitimately needs more steps than a brand
+        page, but not the ~17 near-duplicate literals that had accreted (8.5 / 9.5 /
+        11.5 / 12.5 / 13.5 twins). One documented scale; hierarchy still by weight.
+        --fs-input stays at the iOS no-zoom threshold (16px) on form fields. -- */
+  --fs-micro: 9px; /* uppercase group labels, legend, tiny meta */
+  --fs-2xs: 10.5px; /* captions, hints, dense meta rows */
+  --fs-xs: 11px; /* chips, filter labels, compact controls */
+  --fs-sm: 12px; /* dense body: table cells, buttons, requirement text */
+  --fs-md: 13px; /* secondary prose: descriptions, search, dialogue */
+  --fs-base: 14px; /* body */
+  --fs-lg: 15px; /* section emphasis, small headings */
+  --fs-input: 16px; /* form fields — at/above the iOS zoom threshold */
+  --fs-xl: 17px; /* panel + app title, detail name */
+  --fs-2xl: 21px; /* the empty-panel display headline */
 
   /* -- Metrics -- */
   --panel-width: 384px;
@@ -123,7 +138,7 @@
   --border-strong: oklch(0.77 0.009 80);
   --text: oklch(0.26 0.012 55);
   --text-dim: oklch(0.46 0.013 60);
-  --text-mute: oklch(0.58 0.012 60);
+  --text-mute: oklch(0.5 0.013 60); /* ≥4.5:1 on the light surfaces for small muted labels (WCAG AA) */
 
   --danger: oklch(0.55 0.2 25);
   --resist: oklch(0.52 0.15 150);
@@ -139,6 +154,17 @@
   --legend-bg: oklch(0.99 0.006 85 / 0.82);
 
   color-scheme: light;
+}
+
+/* Smooth the light↔dark swap: theme.ts opens a short `data-theming` window on
+   toggle during which descendant surface / border / text colours cross-fade
+   instead of hard-snapping. Scoped to descendants so :root's own accent-hue morph
+   transition is left intact, and paid only during the toggle (not on every hover).
+   The theme.ts guard means this window never opens under reduced motion. */
+:root[data-theming] * {
+  transition-property: background-color, border-color, color, fill !important;
+  transition-duration: var(--dur-2) !important;
+  transition-timing-function: var(--ease-out-quart) !important;
 }
 
 * {

@@ -24,7 +24,7 @@
 
 .icon {
   display: inline-block;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   line-height: 1;
   animation: iconSwap var(--dur-2) var(--ease-out-quint);
 }

@@ -28,6 +28,35 @@ describe('graph traversal (synthetic)', () => {
     expect(l.edges).toContainEqual(['e', 'd']);
     expect(l.edges).not.toContainEqual(['b', 'c']); // c not in lineage
   });
+
+  it('excluding a node prunes it and everything only reachable through it', () => {
+    // From b, excluding d drops d AND e (e is reachable only via d).
+    expect(descendants(g, 'b', new Set(['d']))).toEqual(new Set(['c']));
+    // c has no descendants, so excluding it just removes c.
+    expect(descendants(g, 'b', new Set(['c']))).toEqual(new Set(['d', 'e']));
+  });
+
+  it('excluded pruning re-derives lineage and drops now-orphaned edges', () => {
+    const l = lineage(g, 'a', new Set(['b']));
+    // b gated the whole tree below a; excluding it leaves a stranded.
+    expect(l.nodes).toEqual(new Set(['a']));
+    expect(l.edges).not.toContainEqual(['a', 'b']);
+  });
+
+  it('a node reachable through a kept branch survives exclusion of another', () => {
+    //   x → p → z  and  x → q → z : z is shared. Excluding p keeps z (via q).
+    const shared = buildGraph(makeDb({
+      x: { evolvesTo: ['p', 'q'] },
+      p: { evolvesTo: ['z'] },
+      q: { evolvesTo: ['z'] },
+      z: { evolvesTo: [] },
+    }));
+    expect(descendants(shared, 'x', new Set(['p']))).toEqual(new Set(['q', 'z']));
+  });
+
+  it('the focus is never removed, even if named in excluded', () => {
+    expect(lineage(g, 'd', new Set(['d'])).nodes.has('d')).toBe(true);
+  });
 });
 
 describe('graph traversal (real data)', () => {

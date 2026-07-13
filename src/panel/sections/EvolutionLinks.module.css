@@ -23,7 +23,64 @@
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text-dim);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Prunable neighbour: the row + its trailing hide/restore toggle sit on one line.
+   The row flexes; the toggle keeps its size at the edge. */
+.neighbour {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.neighbourMon {
+  flex: 1;
+  min-width: 0;
+}
+
+/* A branch that's currently hidden reads as dimmed — but the toggle stays at full
+   strength so its "restore" affordance is unmistakable. */
+.neighbourHidden .neighbourMon {
+  opacity: 0.5;
+}
+
+.pruneBtn {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+  line-height: 1;
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.pruneBtn:hover {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-faint);
+}
+
+/* Hidden state: the toggle is a pressed "restore" — filled with the live accent. */
+.pruneBtn[aria-pressed='true'] {
+  color: var(--accent);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+@media (pointer: coarse) {
+  .pruneBtn {
+    width: 40px;
+    height: 40px;
+  }
 }

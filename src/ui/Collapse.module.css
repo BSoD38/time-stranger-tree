@@ -12,7 +12,7 @@
   border: none;
   color: var(--text);
   font-family: var(--font-display);
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 600;
   text-align: left;
   letter-spacing: 0.4px;
@@ -25,7 +25,7 @@
 .arrow {
   display: inline-block;
   color: var(--accent);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   width: 10px;
   transition: transform var(--transition);
 }

@@ -107,6 +107,12 @@ export interface AppState {
   view: AppView;
   selected: string | null;
   focus: string | null;
+  /** Branches the user has pruned out of the *currently focused* lineage, to cut
+   *  clutter when the endpoint isn't decided yet. Each excluded slug — and
+   *  anything reachable only through it — drops from the focus view. Scoped to
+   *  the current focus: cleared whenever `focus` changes. Session-only (not
+   *  URL-persisted), like `route.avoidJogress`. */
+  lineageExcluded: ReadonlySet<string>;
   // Tree filters: attribute + trait only. Generation is the graph's spatial axis,
   // so it isn't a tree filter (the Codex keeps its own generation filter, codex.*).
   attributes: ReadonlySet<Attribute>;
@@ -129,6 +135,13 @@ export interface AppState {
   openInTree(slug: string): void;
   select(slug: string | null): void;
   setFocus(slug: string | null): void;
+  /** Prune a branch out of the focused lineage. No-op outside focus, or on the
+   *  focus itself. Clears the selection if it was the branch being hidden. */
+  excludeFromLineage(slug: string): void;
+  /** Bring a pruned branch back into the focused lineage. */
+  restoreToLineage(slug: string): void;
+  /** Restore every pruned branch. */
+  clearLineageExclusions(): void;
   setOrientation(value: Orientation): void;
   setHideOthers(value: boolean): void;
   setSettingsOpen(open: boolean): void;
@@ -170,6 +183,7 @@ export const useStore = create<AppState>()(
     view: 'graph',
     selected: null,
     focus: null,
+    lineageExcluded: new Set<string>(),
     attributes: new Set<Attribute>(),
     special: new Set<SpecialFacet>(),
     filtersOpen: false,
@@ -184,15 +198,49 @@ export const useStore = create<AppState>()(
     // Codex is a graph-independent surface: entering it leaves the isolating
     // graph modes (focus / route) so the URL and the visible view never disagree.
     // `selected` is preserved so returning to the Tree lands where you left it.
-    setView: (view) => set(view === 'codex' ? { view, focus: null, routeOpen: false } : { view }),
+    setView: (view) =>
+      set(
+        view === 'codex'
+          ? { view, focus: null, routeOpen: false, lineageExcluded: new Set<string>() }
+          : { view },
+      ),
     openInTree: (slug) =>
-      set({ view: 'graph', selected: slug, focus: null, routeOpen: false }),
+      set({
+        view: 'graph',
+        selected: slug,
+        focus: null,
+        routeOpen: false,
+        lineageExcluded: new Set<string>(),
+      }),
     select: (slug) => set({ selected: slug }),
     // Focus and the route planner are mutually exclusive views (as the URL model
     // already assumes): a route can devolve out of a lineage, which can't be shown
     // inside a focus that isolates — and compacts — only that lineage. Entering
-    // focus closes any open route.
-    setFocus: (slug) => set(slug ? { focus: slug, routeOpen: false } : { focus: null }),
+    // focus closes any open route. Exclusions belong to the lineage being left,
+    // so any focus change (in, out, or to a different anchor) clears them.
+    setFocus: (slug) =>
+      set(
+        slug
+          ? { focus: slug, routeOpen: false, lineageExcluded: new Set<string>() }
+          : { focus: null, lineageExcluded: new Set<string>() },
+      ),
+    excludeFromLineage: (slug) => {
+      const { focus, lineageExcluded, selected } = get();
+      if (!focus || slug === focus || lineageExcluded.has(slug)) return;
+      const next = new Set(lineageExcluded);
+      next.add(slug);
+      // If the branch we're hiding was the current selection, it's about to
+      // vanish — drop back to the lineage overview rather than describing a
+      // now-hidden node in the panel.
+      set({ lineageExcluded: next, selected: selected === slug ? null : selected });
+    },
+    restoreToLineage: (slug) => {
+      const next = new Set(get().lineageExcluded);
+      if (!next.delete(slug)) return;
+      set({ lineageExcluded: next });
+    },
+    clearLineageExclusions: () =>
+      set(get().lineageExcluded.size ? { lineageExcluded: new Set<string>() } : {}),
     setOrientation: (value) => {
       set({ orientation: value });
       savePrefs({ orientation: value, hideOthers: get().hideOthers });
@@ -211,6 +259,7 @@ export const useStore = create<AppState>()(
       set({
         routeOpen: true,
         focus: null, // route and focus are mutually exclusive (see setFocus)
+        lineageExcluded: new Set<string>(), // leaving focus drops its exclusions
         route: computeRoutes({ ...get().route, ...partial }),
       }),
     closeRoute: () => set({ routeOpen: false }),

@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-13T19:30:00Z",
+  "title": "Design System: Time Stranger Tree",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Borrowed Accent (default: Temporal Amber)",
+        "canonical": "oklch(0.8 0.12 72)",
+        "note": "Hue+chroma repainted per selection from the sprite; theme owns lightness (0.8 dark / 0.56 light).",
+        "tonalRamp": ["oklch(0.20 0.12 72)", "oklch(0.30 0.12 72)", "oklch(0.40 0.12 72)", "oklch(0.50 0.12 72)", "oklch(0.60 0.12 72)", "oklch(0.70 0.12 72)", "oklch(0.80 0.12 72)", "oklch(0.90 0.10 72)"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Graphite Stage",
+        "canonical": "oklch(0.16 0.006 66)",
+        "tonalRamp": ["oklch(0.145 0.008 66)", "oklch(0.16 0.006 66)", "oklch(0.205 0.007 66)", "oklch(0.255 0.008 66)", "oklch(0.32 0.009 66)", "oklch(0.4 0.011 66)", "oklch(0.6 0.008 72)", "oklch(0.95 0.004 75)"]
+      },
+      "jogress": { "role": "secondary", "displayName": "Jogress/DNA Violet", "canonical": "oklch(0.66 0.19 305)" },
+      "item": { "role": "secondary", "displayName": "Item Amber", "canonical": "oklch(0.76 0.16 58)" },
+      "bond": { "role": "secondary", "displayName": "Bond Cyan", "canonical": "oklch(0.74 0.11 215)" },
+      "resist": { "role": "secondary", "displayName": "Resist Green", "canonical": "oklch(0.72 0.15 150)" },
+      "danger": { "role": "secondary", "displayName": "Danger Red", "canonical": "oklch(0.68 0.19 25)" },
+      "attr-vaccine": { "role": "tertiary", "displayName": "Vaccine Blue", "canonical": "#3496ef" },
+      "attr-data": { "role": "tertiary", "displayName": "Data Green", "canonical": "#4cb86a" },
+      "attr-virus": { "role": "tertiary", "displayName": "Virus Violet", "canonical": "#ac5cd7" },
+      "attr-free": { "role": "tertiary", "displayName": "Free Gold", "canonical": "#d7ab28" },
+      "attr-variable": { "role": "tertiary", "displayName": "Variable Pink", "canonical": "#ee5b9a" },
+      "attr-unknown": { "role": "tertiary", "displayName": "Unknown Slate", "canonical": "#8594a4" },
+      "attr-no-data": { "role": "tertiary", "displayName": "No-Data Slate", "canonical": "#65707b" }
+    },
+    "typographyMeta": {
+      "brand": { "displayName": "Brand (Chakra Petch)", "purpose": "Wordmark and splash only — the digital face that stamps the game identity. Never on data or controls." },
+      "heading": { "displayName": "Heading (Hanken Grotesk 700)", "purpose": "h1–h4; panel titles up to the splash headline." },
+      "body": { "displayName": "Body (Hanken Grotesk 400)", "purpose": "All copy and data; 14px base, line-height 1.5." },
+      "label": { "displayName": "Label (Hanken Grotesk 700, uppercase)", "purpose": "The global .label kicker for filter/section group labels; deliberate and sparse." }
+    },
+    "shadows": [
+      { "name": "dropdown", "value": "0 12px 32px oklch(0.08 0.01 66 / 0.6)", "purpose": "Search results and popovers that lift off the surface (light theme: … / 0.2)." },
+      { "name": "panel", "value": "-10px 0 30px oklch(0.08 0.01 66 / 0.32)", "purpose": "The side detail panel / mobile bottom-sheet edge (light theme: … / 0.12)." }
+    ],
+    "motion": [
+      { "name": "transition-fast", "value": "130ms cubic-bezier(0.22, 0.7, 0.28, 1)", "purpose": "Default control feedback (border/background/color) — keeps the chrome calm." },
+      { "name": "transition", "value": "220ms cubic-bezier(0.22, 0.7, 0.28, 1)", "purpose": "Larger chrome transitions." },
+      { "name": "accent-morph", "value": "--accent-h/--accent-c over 320ms ease-out-quart (on :root)", "purpose": "The signature flourish: the accent ramp sweeps to the selected Digimon's hue rather than cutting." },
+      { "name": "dur-press", "value": "110ms", "purpose": "Tactile press-scale (buttons scale to 0.92–0.96)." },
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.25, 1, 0.5, 1)", "purpose": "Expressive ease-out for entrances, stat fills, and the accent morph." },
+      { "name": "ease-out-quint", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Expressive ease-out variant." },
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Strongest ease-out for the liveliest moments." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Segmented Button",
+      "kind": "button",
+      "refersTo": "seg-button",
+      "description": "Toolbar/action toggle; the whole toolbar shares one tactile press.",
+      "html": "<div style=\"display:flex;gap:6px\"><button class=\"ds-seg\">Tree</button><button class=\"ds-seg ds-seg--active\">Field guide</button></div>",
+      "css": ".ds-seg{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-display);font-size:12px;padding:5px 12px;transition:border-color 130ms cubic-bezier(0.22,0.7,0.28,1),background 130ms,transform 110ms cubic-bezier(0.25,1,0.5,1)}.ds-seg:hover{border-color:color-mix(in oklab,var(--accent) 55%,var(--border))}.ds-seg:active{transform:scale(0.96)}.ds-seg--active{border-color:color-mix(in oklab,var(--accent) 70%,var(--border));background:var(--accent-soft)}"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "Pill filter toggle shared by the Tree filter bar and the Field guide; carries aria-pressed.",
+      "html": "<div style=\"display:flex;gap:5px;align-items:center\"><button class=\"ds-chip\" aria-pressed=\"false\">Vaccine</button><button class=\"ds-chip ds-chip--active\" aria-pressed=\"true\">Free</button></div>",
+      "css": ".ds-chip{--chip-color:var(--accent);display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-pill);color:var(--text-dim);font-family:var(--font-display);font-size:11px;font-weight:600;transition:border-color 130ms,background 130ms,color 130ms}.ds-chip:hover{border-color:color-mix(in oklab,var(--chip-color) 60%,var(--border));color:var(--text)}.ds-chip--active{border-color:color-mix(in oklab,var(--chip-color) 62%,var(--border));background:color-mix(in oklab,var(--chip-color) 16%,transparent);color:var(--text)}"
+    },
+    {
+      "name": "Domain Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Display-only badge for a domain hue; label stays --text so color is never the sole channel.",
+      "html": "<span class=\"ds-badge\" style=\"--chip-color:var(--jogress)\">⧉ Angewomon</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border:1px solid color-mix(in oklab,var(--chip-color) 55%,var(--border));border-radius:var(--radius-pill);background:color-mix(in oklab,var(--chip-color) 15%,transparent);color:var(--text);font-family:var(--font-display);font-size:11px;font-weight:600;line-height:17px}"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Search / endpoint field; border warms to accent on focus (plus the global focus ring on keyboard focus).",
+      "html": "<input class=\"ds-input\" type=\"search\" placeholder=\"Filter by name or #…\" />",
+      "css": ".ds-input{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font-body);font-size:12.5px;padding:4px 8px;outline:none;min-width:220px}.ds-input::placeholder{color:var(--text-mute)}.ds-input:focus{border-color:var(--accent)}"
+    },
+    {
+      "name": "Accent Checkbox",
+      "kind": "custom",
+      "refersTo": "checkbox",
+      "description": "Native checkbox with a drawn box; the checked fill follows the live accent (the selected Digimon's color).",
+      "html": "<label class=\"ds-check\"><input type=\"checkbox\" checked class=\"ds-check__in\"/><span class=\"ds-check__box\" aria-hidden=\"true\"><svg viewBox=\"0 0 12 12\" width=\"11\" height=\"11\"><path d=\"M2.5 6.2 L5 8.6 L9.5 3.4\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span>Avoid Jogress/DNA evolutions if possible</label>",
+      "css": ".ds-check{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--text);user-select:none}.ds-check__in{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;margin:0}.ds-check__box{display:grid;place-items:center;width:16px;height:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:5px;color:transparent;transition:background-color 130ms,border-color 130ms,color 130ms}.ds-check:hover .ds-check__box{border-color:var(--accent)}.ds-check__in:checked + .ds-check__box{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}"
+    },
+    {
+      "name": "Icon Button",
+      "kind": "button",
+      "refersTo": "seg-button",
+      "description": "Compact icon control (close / swap / pager); accent-faint wash and press feedback.",
+      "html": "<button class=\"ds-icon\" aria-label=\"Close\"><svg viewBox=\"0 0 16 16\" width=\"14\" height=\"14\"><path d=\"M4 4 L12 12 M12 4 L4 12\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\"/></svg></button>",
+      "css": ".ds-icon{display:grid;place-items:center;width:30px;height:30px;padding:0;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-pill);color:var(--text-dim);transition:color 130ms,border-color 130ms,background-color 130ms}.ds-icon:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-faint)}.ds-icon:active{transform:scale(0.92)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Chromatic Instrument",
+    "overview": "Time Stranger Tree is a precise, quiet instrument that borrows all of its color from the Digimon in focus. The housing is a warm graphite stage at near-zero chroma; the single accent is repainted, live, with the selected sprite's own signature hue, so the whole interface morphs as you move through the network. The feeling is a capable field tool with a light sci-fi charge — Digivice / terminal energy, without ever cosplaying it. It is tactile and confident: controls sit on solid graphite fills, the active state is a wash of the live accent, and interactions answer back. Density is high and unafraid because the users are planners who want the data. Motion is reserved for meaning: state, feedback, and the one signature flourish — the chromatic morph.",
+    "keyCharacteristics": [
+      "Borrowed color: one dynamic accent, taken from the selected Digimon's sprite; the graphite chrome never competes.",
+      "Dual-theme, single system: a night viewport and a daylight-parchment viewport, same tokens, accent legible in both.",
+      "Dense but hierarchical: lots of data, ordered by weight and spacing, never a flat grid.",
+      "Tactile & confident: solid fills, accent-soft active states, press feedback, a brisk chromatic morph.",
+      "Color is never the only channel: names, markers, and shapes always carry the same meaning."
+    ],
+    "rules": [
+      { "name": "The Borrowed Color Rule", "body": "The accent is never chosen; it is taken from the Digimon in focus. The chrome stays graphite so the subject can supply the color. Never hard-code a brand hue where --accent belongs.", "section": "colors" },
+      { "name": "The No Sole-Channel Rule", "body": "Color never carries meaning alone. Every attribute, resistance, domain accent, and route-step kind is paired with a name, a glyph, or a shape badge. If you remove all color, the interface must still be readable.", "section": "colors" },
+      { "name": "The One-Family Rule", "body": "Hierarchy comes from weight and size within Hanken Grotesk, never from adding another body face.", "section": "typography" },
+      { "name": "The Brand-Face Firewall", "body": "Chakra Petch is for the wordmark and splash only. It never labels a control, a stat, or a row.", "section": "typography" },
+      { "name": "The Flat-Stage Rule", "body": "Surfaces are flat at rest; if something has a drop shadow it must actually float above the page (a dropdown, the panel).", "section": "elevation" }
+    ],
+    "dos": [
+      "Do take the accent from the selected Digimon (--accent, repainted by chroma.ts); let the graphite chrome recede so the subject leads.",
+      "Do author color in OKLCH and reach for a token before any literal value.",
+      "Do pair every color with a second channel — a name, a glyph, or a shape badge.",
+      "Do keep components tactile: surface-2 fills, --accent-soft active states, a scale(0.96) press, brisk 130ms transitions.",
+      "Do reserve motion for meaning and honor prefers-reduced-motion.",
+      "Do build depth by stacking bg → surface → surface-2; add a shadow only when an element genuinely floats.",
+      "Do keep Chakra Petch to the wordmark and splash; everything else is Hanken Grotesk, hierarchy by weight."
+    ],
+    "donts": [
+      "Don't ship the generic AI-slop SaaS look: no cream/beige backgrounds, no gradient text, no identical icon-card grids, no tracked-uppercase eyebrow over every section, no hero-metric template.",
+      "Don't drift toward a cluttered fan-wiki or a bare spreadsheet dump — the named anti-references.",
+      "Don't use a border-left/border-right greater than 1px as a colored accent stripe.",
+      "Don't use glassmorphism as decoration.",
+      "Don't hard-code a brand hue where --accent belongs, or let color be the only thing distinguishing two states.",
+      "Don't put a display/second face on data, labels, or controls; and never nest cards inside cards."
+    ]
+  }
+}
