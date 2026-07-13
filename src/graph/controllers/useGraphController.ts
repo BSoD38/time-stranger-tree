@@ -210,10 +210,20 @@ function frameGraph(cy: Core, animate = true): void {
 
   reorientGraph(cy, o);
 
+  // Route planner open but no path to frame — no endpoints yet, no route at the
+  // chosen agent rank, or from === to (0 steps). Show the whole tree, exactly as
+  // when the planner first opens, so the user keeps their bearings. Without this
+  // we'd fall through to the selection anchor below and pan the viewport onto a
+  // stale position, parking the graph in empty space.
+  if (state.routeOpen) {
+    resetView(cy, o, animate);
+    return;
+  }
+
   // Normal tree view: an active filter isolates + re-packs the matches, mirroring
-  // focus. (Skipped while the route planner is open — recompute only dims there.)
+  // focus.
   const criteria = { attributes: state.attributes, special: state.special };
-  if (!state.routeOpen && hasActiveCriteria(criteria)) {
+  if (hasActiveCriteria(criteria)) {
     const matching = filterSlugs(appData().db, criteria);
     compactFilter(cy, matching, o);
     fitEles(cy, matching, 60, animate);
