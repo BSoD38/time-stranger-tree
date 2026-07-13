@@ -61,15 +61,13 @@
 }
 
 /* Popover — same vocabulary as the settings menu: surface fill, dropdown shadow,
-   brief pop-in. Opens below the trigger. */
+   brief pop-in. A native top-layer popover (positioned in JS from the trigger) so
+   it clears the detail panel / bottom-sheet stacking context. `display` is set
+   only on :popover-open, so this rule never fights the UA's closed display:none. */
 .pop {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  z-index: var(--z-dropdown);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  position: fixed;
+  inset: auto;
+  margin: 0;
   width: 232px;
   max-width: calc(100vw - 24px);
   padding: 10px;
@@ -77,6 +75,14 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-dropdown);
+}
+
+.pop:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100dvh - 70px);
+  overflow-y: auto;
   animation: hb-pop-in var(--transition-fast);
 }
 
@@ -189,7 +195,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pop {
+  .pop:popover-open {
     animation: none;
   }
 }

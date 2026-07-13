@@ -315,6 +315,17 @@
   color: var(--text-dim);
 }
 
+.summaryNote {
+  display: block;
+  margin-top: 3px;
+}
+
+.summaryNoteGlyph {
+  color: var(--bond);
+  margin-right: 4px;
+  font-weight: 700;
+}
+
 /* Touch: comfortable targets for the route planner's endpoint pickers and pager. */
 @media (pointer: coarse) {
   .endpointSearch input {

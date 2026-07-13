@@ -16,6 +16,58 @@
   font-weight: 700;
 }
 
+/* Evolves-to sub-line whose stat values are reduced by the player's Agent Skills:
+   shows base struck beside the reduced value (the chips' dual read) and wraps so
+   nothing is clipped. Led by the bond glyph so colour is never the sole signal. */
+.reduced {
+  display: block;
+  white-space: normal;
+  line-height: 1.45;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.reducedGlyph {
+  color: var(--bond);
+  font-weight: 700;
+}
+
+/* One stat block (label + base → reduced) stays on a single line; the line wraps
+   only at the separators between blocks. */
+.part {
+  white-space: nowrap;
+}
+
+.sep {
+  white-space: normal;
+}
+
+/* base → reduced, matching StatReqChip: quiet base, arrow carries the meaning,
+   reduced value bold and bright. No strikethrough. */
+.wasStat {
+  color: var(--text-mute);
+}
+
+.arrow {
+  margin: 0 3px;
+  color: var(--text-mute);
+}
+
+.nowStat {
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Agent-rank requirement, sat quietly beside an evolves-to target's name (out of
+   the requirement sub-line, since nearly every evolution has one). */
+.rank {
+  margin-left: 6px;
+  color: var(--text-mute);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 /* base-personality tag on each evolution link */
 .persona {
   padding: 1px 7px;

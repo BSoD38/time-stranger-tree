@@ -1,8 +1,11 @@
 import { appData } from '../data/appData';
 import type { RouteStep } from '../data/route';
+import { reduceStat, stacksForPersonality } from '../data/agentSkills';
 import { useStore } from '../state/store';
 import { Chip } from '../ui/Chip';
 import { MonRow } from '../ui/MonRow';
+import { ReductionNote } from '../ui/ReductionNote';
+import { StatReqChip } from '../ui/StatReqChip';
 import styles from './RouteStep.module.css';
 
 interface RouteStepCardProps {
@@ -14,12 +17,16 @@ interface RouteStepCardProps {
 
 export function RouteStepCard({ step, index, active, onHover }: RouteStepCardProps) {
   const select = useStore((s) => s.select);
+  const agentSkills = useStore((s) => s.agentSkills);
   const db = appData().db;
   const from = db.digimon[step.from];
   const to = db.digimon[step.to];
   const isEvolve = step.kind === 'digivolve';
   const requirement = step.requirement;
   const persona = to.basePersonality;
+  const stacks = stacksForPersonality(persona, agentSkills);
+  const showReduction =
+    isEvolve && stacks > 0 && !!requirement && Object.keys(requirement.stats).length > 0;
 
   return (
     <div
@@ -52,9 +59,7 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
           <>
             <Chip>Rank ≥ {requirement.agentRank}</Chip>
             {Object.entries(requirement.stats).map(([stat, value]) => (
-              <Chip key={stat}>
-                {stat} ≥ {value}
-              </Chip>
+              <StatReqChip key={stat} label={stat} base={value!} reduced={reduceStat(value!, stacks)} />
             ))}
             {requirement.talent !== undefined && <Chip>Talent ≥ {requirement.talent}</Chip>}
             {requirement.item && (
@@ -78,6 +83,8 @@ export function RouteStepCard({ step, index, active, onHover }: RouteStepCardPro
           </>
         )}
       </div>
+
+      {showReduction && <ReductionNote stacks={stacks} personality={persona} />}
 
       {!isEvolve && (
         <p className={styles.note}>

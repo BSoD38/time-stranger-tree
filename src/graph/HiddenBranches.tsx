@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appData } from '../data/appData';
 import { useStore } from '../state/store';
 import { Sprite } from '../ui/Sprite';
@@ -19,6 +19,8 @@ export function HiddenBranches() {
   const clearAll = useStore((s) => s.clearLineageExclusions);
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
 
   // Stable dex order so the list doesn't reshuffle as branches are added.
   const items = useMemo(() => {
@@ -28,12 +30,39 @@ export function HiddenBranches() {
     );
   }, [excluded]);
 
-  // Close on outside pointer / Escape. Escape is captured here so it closes the
-  // popover without also unwinding focus via the global key handler.
+  // Anchor the menu under the trigger. It renders in the top layer (manual
+  // popover below), so it clears the detail panel / bottom-sheet stacking
+  // context — hence positioning it ourselves. Left-aligned (control is top-left).
+  const place = useCallback(() => {
+    const btn = triggerRef.current;
+    const pop = popRef.current;
+    if (!btn || !pop) return;
+    const r = btn.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - pop.offsetWidth - 8));
+    pop.style.left = `${left}px`;
+    pop.style.top = `${r.bottom + 8}px`;
+  }, []);
+
+  useEffect(() => {
+    const pop = popRef.current;
+    if (!pop) return;
+    if (open) {
+      if (!pop.matches(':popover-open')) pop.showPopover();
+      place();
+    } else if (pop.matches(':popover-open')) {
+      pop.hidePopover();
+    }
+  }, [open, place]);
+
+  // A `manual` popover doesn't light-dismiss, so we keep our own outside-pointer
+  // + Escape handling — capturing Escape so it closes without also unwinding
+  // focus via the global key handler. Reposition on resize.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -41,13 +70,16 @@ export function HiddenBranches() {
         setOpen(false);
       }
     };
+    const onResize = () => place();
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('resize', onResize);
     };
-  }, [open]);
+  }, [open, place]);
 
   const count = excluded.size;
   if (!focus || count === 0) return null;
@@ -57,6 +89,7 @@ export function HiddenBranches() {
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={open ? `${styles.trigger} ${styles.triggerOpen}` : styles.trigger}
         onClick={() => setOpen(!open)}
@@ -73,9 +106,8 @@ export function HiddenBranches() {
           ▾
         </span>
       </button>
-      {open && (
-        <div className={styles.pop} role="group" aria-label="Hidden branches">
-          <div className={styles.popHead}>
+      <div ref={popRef} popover="manual" className={styles.pop} role="group" aria-label="Hidden branches">
+        <div className={styles.popHead}>
             <span className={styles.popTitle}>Hidden branches</span>
             <button
               type="button"
@@ -110,8 +142,7 @@ export function HiddenBranches() {
               );
             })}
           </ul>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

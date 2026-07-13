@@ -6,12 +6,21 @@
   border-radius: var(--radius);
 }
 
+/* Title row: the section heading with the near-universal Agent-rank badge parked
+   at its right edge, out of the wrapping requirement pills below. */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 /* extends the global `.label` utility — accented section heading */
 .title {
   font-size: var(--fs-sm);
   letter-spacing: 0.6px;
   color: var(--accent);
-  margin-bottom: 8px;
 }
 
 .pills {

@@ -1,6 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { Orientation } from '../graph/orient';
+import {
+  AGENT_SKILL_CATEGORIES,
+  MAX_STACKS,
+  reductionPct,
+} from '../data/agentSkills';
 import styles from './SettingsMenu.module.css';
 
 interface Choice<T> {
@@ -41,7 +46,81 @@ function Segmented<T extends string | boolean>({
   );
 }
 
-/** Display preferences popover — layout orientation and isolate (focus/route) behaviour. */
+/** Compact −/value/+ stepper for a 0..max integer (the Agent-Skill stack counts). */
+function Stepper({
+  value,
+  max,
+  onChange,
+  ariaLabel,
+}: {
+  value: number;
+  max: number;
+  onChange: (value: number) => void;
+  ariaLabel: string;
+}) {
+  return (
+    <div className={styles.stepper}>
+      <button
+        type="button"
+        className={styles.stepBtn}
+        onClick={() => onChange(value - 1)}
+        disabled={value <= 0}
+        aria-label={`${ariaLabel}: decrease`}
+      >
+        −
+      </button>
+      <span className={styles.stepValue} aria-label={`${ariaLabel}: ${value} of ${max}`}>
+        {value}
+      </span>
+      <button
+        type="button"
+        className={styles.stepBtn}
+        onClick={() => onChange(value + 1)}
+        disabled={value >= max}
+        aria-label={`${ariaLabel}: increase`}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/** The four Bond Agent Skills — stack counts feed the reduced-requirement preview. */
+function AgentSkillsSection() {
+  const agentSkills = useStore((s) => s.agentSkills);
+  const setAgentSkill = useStore((s) => s.setAgentSkill);
+
+  return (
+    <div className={styles.skills}>
+      <span className={styles.fieldLabel}>Agent Skills</span>
+      <span className={styles.hint}>
+        Stacks of each “Digivolution” skill (0–{MAX_STACKS}). Each stack cuts the stat requirements
+        of matching-personality evolutions by {reductionPct(1)}%.
+      </span>
+      <div className={styles.skillRows}>
+        {AGENT_SKILL_CATEGORIES.map((category) => {
+          const stacks = agentSkills[category];
+          return (
+            <div className={styles.skillRow} key={category}>
+              <span className={styles.skillName}>{category}</span>
+              <Stepper
+                value={stacks}
+                max={MAX_STACKS}
+                onChange={(v) => setAgentSkill(category, v)}
+                ariaLabel={`Digivolution of ${category}`}
+              />
+              <span className={stacks > 0 ? styles.skillPctOn : styles.skillPct}>
+                {stacks > 0 ? `−${reductionPct(stacks)}%` : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/** Settings popover — display preferences plus the owned Agent-Skill stacks. */
 export function SettingsMenu() {
   const open = useStore((s) => s.settingsOpen);
   const setOpen = useStore((s) => s.setSettingsOpen);
@@ -50,66 +129,101 @@ export function SettingsMenu() {
   const hideOthers = useStore((s) => s.hideOthers);
   const setHideOthers = useStore((s) => s.setHideOthers);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
 
+  // Anchor the menu under the gear. It renders in the top layer (see the manual
+  // popover below), so it clears the mobile bottom-sheet's stacking context —
+  // which means we position it ourselves rather than relative to the trigger.
+  const place = useCallback(() => {
+    const btn = triggerRef.current;
+    const pop = popRef.current;
+    if (!btn || !pop) return;
+    const r = btn.getBoundingClientRect();
+    const left = Math.max(8, Math.min(r.right - pop.offsetWidth, window.innerWidth - pop.offsetWidth - 8));
+    pop.style.left = `${left}px`;
+    pop.style.top = `${r.bottom + 8}px`;
+  }, []);
+
+  // Drive the native popover from the store, so it can also be opened from
+  // elsewhere (the detail panel's "Open settings" tip) and always paints in the
+  // top layer — above the detail panel / mobile bottom sheet.
+  useEffect(() => {
+    const pop = popRef.current;
+    if (!pop) return;
+    if (open) {
+      if (!pop.matches(':popover-open')) pop.showPopover();
+      place();
+    } else if (pop.matches(':popover-open')) {
+      pop.hidePopover();
+    }
+  }, [open, place]);
+
+  // A `manual` popover doesn't light-dismiss, so we keep our own outside-pointer
+  // + Escape handling — capturing Escape so it closes the menu without also
+  // unwinding focus/route via the global key handler. Reposition on resize.
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     };
-    // capture Escape here so it closes the popover without also unwinding
-    // focus/route via the global key handler
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
         setOpen(false);
       }
     };
+    const onResize = () => place();
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown, true);
+    window.addEventListener('resize', onResize);
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown, true);
+      window.removeEventListener('resize', onResize);
     };
-  }, [open, setOpen]);
+  }, [open, setOpen, place]);
 
   return (
     <div className={styles.wrap} ref={wrapRef}>
       <button
+        ref={triggerRef}
         className={open ? `${styles.trigger} ${styles.triggerOpen}` : styles.trigger}
         onClick={() => setOpen(!open)}
         aria-haspopup="true"
         aria-expanded={open}
-        aria-label="Display settings"
-        title="Display settings"
+        aria-label="Settings"
+        title="Settings"
       >
         <span className={styles.icon} aria-hidden="true">
           ⚙
         </span>
       </button>
-      {open && (
-        <div className={styles.pop}>
-          <Segmented<Orientation>
-            label="Layout"
-            hint="Rows spreads members sideways; columns suits portrait screens."
-            value={orientation}
-            choices={[
-              { value: 'rows', label: 'Rows' },
-              { value: 'columns', label: 'Columns' },
-            ]}
-            onChange={setOrientation}
-          />
-          <Segmented<boolean>
-            label="Focus & route"
-            hint="How the rest of the tree behaves while a lineage is focused or a route is shown."
-            value={hideOthers}
-            choices={[
-              { value: true, label: 'Hide others' },
-              { value: false, label: 'Dim others' },
-            ]}
-            onChange={setHideOthers}
-          />
-        </div>
-      )}
+      <div ref={popRef} popover="manual" className={styles.pop}>
+        <Segmented<Orientation>
+          label="Layout"
+          hint="Rows spreads members sideways; columns suits portrait screens."
+          value={orientation}
+          choices={[
+            { value: 'rows', label: 'Rows' },
+            { value: 'columns', label: 'Columns' },
+          ]}
+          onChange={setOrientation}
+        />
+        <Segmented<boolean>
+          label="Focus & route"
+          hint="How the rest of the tree behaves while a lineage is focused or a route is shown."
+          value={hideOthers}
+          choices={[
+            { value: true, label: 'Hide others' },
+            { value: false, label: 'Dim others' },
+          ]}
+          onChange={setHideOthers}
+        />
+        <AgentSkillsSection />
+      </div>
     </div>
   );
 }

@@ -3,7 +3,13 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { appData } from '../data/appData';
 import type { Orientation } from '../graph/orient';
 import { findRoutes, type Route } from '../data/route';
-import type { Attribute, Generation, StatLevel } from '../data/schema';
+import {
+  AGENT_SKILL_CATEGORIES,
+  clampStacks,
+  EMPTY_AGENT_SKILLS,
+  type AgentSkillStacks,
+} from '../data/agentSkills';
+import type { AgentSkillCategory, Attribute, Generation, StatLevel } from '../data/schema';
 import type { SpecialFacet } from '../data/search';
 import type { SortKey as CodexSortKey } from '../codex/codexRows';
 
@@ -15,8 +21,26 @@ const PREFS_KEY = 'tst:prefs';
 interface Prefs {
   orientation: Orientation;
   hideOthers: boolean;
+  /** Owned Bond Agent-Skill stacks (0..4 each) used to preview reduced stat reqs. */
+  agentSkills: AgentSkillStacks;
 }
-const DEFAULT_PREFS: Prefs = { orientation: 'rows', hideOthers: true };
+const DEFAULT_PREFS: Prefs = {
+  orientation: 'rows',
+  hideOthers: true,
+  agentSkills: EMPTY_AGENT_SKILLS,
+};
+
+/** Defensively coerce a persisted (or hand-edited) blob into valid stack counts. */
+function parseStacks(raw: unknown): AgentSkillStacks {
+  const out: AgentSkillStacks = { ...EMPTY_AGENT_SKILLS };
+  if (raw && typeof raw === 'object') {
+    for (const cat of AGENT_SKILL_CATEGORIES) {
+      const v = (raw as Record<string, unknown>)[cat];
+      if (typeof v === 'number') out[cat] = clampStacks(v);
+    }
+  }
+  return out;
+}
 
 function loadPrefs(): Prefs {
   try {
@@ -27,6 +51,7 @@ function loadPrefs(): Prefs {
       orientation: p.orientation === 'columns' ? 'columns' : 'rows',
       // `focusHides` is the pre-generalisation key — read it as a fallback
       hideOthers: (p.hideOthers ?? p.focusHides) !== false,
+      agentSkills: parseStacks(p.agentSkills),
     };
   } catch {
     return DEFAULT_PREFS;
@@ -39,6 +64,11 @@ function savePrefs(prefs: Prefs): void {
   } catch {
     /* private mode / disabled storage — preference just won't persist */
   }
+}
+
+/** Pull the persistable slice out of the live store state (single source for saves). */
+function snapshotPrefs(s: Pick<Prefs, keyof Prefs>): Prefs {
+  return { orientation: s.orientation, hideOthers: s.hideOthers, agentSkills: s.agentSkills };
 }
 
 export interface RouteState {
@@ -123,6 +153,8 @@ export interface AppState {
   orientation: Orientation;
   /** Isolate mode: hide (vs dim) everything outside the focused lineage / route. */
   hideOthers: boolean;
+  /** Owned Bond Agent-Skill stacks (0..4 each), previewing reduced stat reqs. */
+  agentSkills: AgentSkillStacks;
   settingsOpen: boolean;
   codex: CodexState;
 
@@ -144,6 +176,7 @@ export interface AppState {
   clearLineageExclusions(): void;
   setOrientation(value: Orientation): void;
   setHideOthers(value: boolean): void;
+  setAgentSkill(category: AgentSkillCategory, value: number): void;
   setSettingsOpen(open: boolean): void;
   toggleAttribute(value: Attribute): void;
   toggleSpecial(value: SpecialFacet): void;
@@ -243,11 +276,15 @@ export const useStore = create<AppState>()(
       set(get().lineageExcluded.size ? { lineageExcluded: new Set<string>() } : {}),
     setOrientation: (value) => {
       set({ orientation: value });
-      savePrefs({ orientation: value, hideOthers: get().hideOthers });
+      savePrefs(snapshotPrefs(get()));
     },
     setHideOthers: (value) => {
       set({ hideOthers: value });
-      savePrefs({ orientation: get().orientation, hideOthers: value });
+      savePrefs(snapshotPrefs(get()));
+    },
+    setAgentSkill: (category, value) => {
+      set({ agentSkills: { ...get().agentSkills, [category]: clampStacks(value) } });
+      savePrefs(snapshotPrefs(get()));
     },
     setSettingsOpen: (open) => set({ settingsOpen: open }),
     toggleAttribute: (value) => set({ attributes: toggled(get().attributes, value) }),

@@ -1,7 +1,9 @@
 import { useReducer, useState } from 'react';
 import { appData } from '../data/appData';
+import { hasAnyStacks, reduceRouteSteps } from '../data/agentSkills';
 import { search } from '../data/search';
 import { summarizeRoute } from '../data/summary';
+import type { StatKey } from '../data/schema';
 import { useStore } from '../state/store';
 import { exitRoute } from '../state/urlSync';
 import { useSearchNav } from '../search/useSearchNav';
@@ -9,6 +11,7 @@ import { Chip } from '../ui/Chip';
 import { MonRow } from '../ui/MonRow';
 import { Panel, CloseButton } from '../ui/Panel';
 import { Sprite } from '../ui/Sprite';
+import { StatReqChip } from '../ui/StatReqChip';
 import { RouteStepCard } from './RouteStep';
 import styles from './RoutePlanner.module.css';
 
@@ -108,6 +111,7 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
 
 export function RoutePlanner() {
   const route = useStore((s) => s.route);
+  const agentSkills = useStore((s) => s.agentSkills);
   const swapRoute = useStore((s) => s.swapRoute);
   const setMaxAgentRank = useStore((s) => s.setMaxAgentRank);
   const setAvoidJogress = useStore((s) => s.setAvoidJogress);
@@ -121,6 +125,13 @@ export function RoutePlanner() {
   const routes = route.routes;
   const active = routes?.[route.active];
   const summary = active && active.steps.length ? summarizeRoute(active.steps) : null;
+  // A second fold over the same steps with each step's stat thresholds reduced
+  // by the player's bond stacks — so the summary ceiling matches the per-step
+  // cards. Only computed when at least one bond is stacked.
+  const reducedSummary =
+    active && summary && hasAnyStacks(agentSkills)
+      ? summarizeRoute(reduceRouteSteps(active.steps, appData().db, agentSkills))
+      : null;
   // "Avoid if possible" honesty: the demotion ranks any jogress-free route first,
   // so if EVERY route still has a jogress step, none exists — say so plainly.
   const noJogressFree =
@@ -239,9 +250,12 @@ export function RoutePlanner() {
                 <div className={styles.summaryPills}>
                   <Chip>Rank ≥ {summary.maxAgentRank}</Chip>
                   {Object.entries(summary.maxStats).map(([stat, value]) => (
-                    <Chip key={stat}>
-                      {stat} ≥ {value}
-                    </Chip>
+                    <StatReqChip
+                      key={stat}
+                      label={stat}
+                      base={value}
+                      reduced={reducedSummary ? (reducedSummary.maxStats[stat as StatKey] ?? value) : value}
+                    />
                   ))}
                   {summary.maxTalent && <Chip>Talent ≥ {summary.maxTalent}</Chip>}
                   {summary.items.map((item) => (
@@ -262,6 +276,14 @@ export function RoutePlanner() {
                 </div>
                 <div className={styles.caption}>
                   Stat thresholds apply at each step, not all at once.
+                  {reducedSummary && (
+                    <span className={styles.summaryNote}>
+                      <span className={styles.summaryNoteGlyph} aria-hidden="true">
+                        ❖
+                      </span>
+                      Reduced by your Agent Skills on steps whose personality you match.
+                    </span>
+                  )}
                 </div>
               </div>
             )}
