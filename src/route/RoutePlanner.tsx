@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useReducer, useState } from 'react';
 import { appData } from '../data/appData';
 import { search } from '../data/search';
 import { summarizeRoute } from '../data/summary';
@@ -13,6 +13,18 @@ import { RouteStepCard } from './RouteStep';
 import styles from './RoutePlanner.module.css';
 
 const RANKS = [1, 3, 5, 7, 8, 9, 10];
+
+/** Vertical exchange glyph (up + down arrows) for the From⇄To swap. */
+function SwapIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" focusable="false">
+      <g fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5.5 12.5 V3.5 M3.3 5.7 L5.5 3.5 L7.7 5.7" />
+        <path d="M10.5 3.5 V12.5 M8.3 10.3 L10.5 12.5 L12.7 10.3" />
+      </g>
+    </svg>
+  );
+}
 
 function EndpointPicker({ which }: { which: 'from' | 'to' }) {
   const value = useStore((s) => s.route[which]);
@@ -34,7 +46,7 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
   });
 
   return (
-    <div className={styles.endpoint}>
+    <div className={styles.endpoint} data-endpoint={which}>
       <span className={`label ${styles.endpointLabel}`}>{which === 'from' ? 'From' : 'To'}</span>
       {digimon ? (
         <button
@@ -96,9 +108,14 @@ function EndpointPicker({ which }: { which: 'from' | 'to' }) {
 
 export function RoutePlanner() {
   const route = useStore((s) => s.route);
+  const swapRoute = useStore((s) => s.swapRoute);
   const setMaxAgentRank = useStore((s) => s.setMaxAgentRank);
   const setActiveRoute = useStore((s) => s.setActiveRoute);
   const setActiveStep = useStore((s) => s.setActiveStep);
+  // Each swap adds a half-turn to the glyph so the flip stays directional
+  // however many times it's pressed (reduced-motion snaps it — tokens.css).
+  const [flips, flip] = useReducer((n: number) => n + 1, 0);
+  const canSwap = Boolean(route.from || route.to);
 
   const routes = route.routes;
   const active = routes?.[route.active];
@@ -112,8 +129,25 @@ export function RoutePlanner() {
       </header>
 
       <div className={styles.inputs}>
-        <EndpointPicker which="from" />
-        <EndpointPicker which="to" />
+        <div className={styles.endpoints}>
+          <EndpointPicker which="from" />
+          <button
+            type="button"
+            className={styles.swap}
+            onClick={() => {
+              swapRoute();
+              flip();
+            }}
+            disabled={!canSwap}
+            title="Swap From and To"
+            aria-label="Swap From and To"
+          >
+            <span className={styles.swapGlyph} style={{ transform: `rotate(${flips * 180}deg)` }}>
+              <SwapIcon />
+            </span>
+          </button>
+          <EndpointPicker which="to" />
+        </div>
         <label className={styles.rank}>
           My agent rank
           <select

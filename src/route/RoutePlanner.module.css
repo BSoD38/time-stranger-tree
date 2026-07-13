@@ -18,10 +18,70 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* From / swap / To laid out as a 2-column grid: the pickers stack in column 1,
+   the swap control sits in column 2 spanning both rows so it's centred on the
+   seam between them (the maps / flight-search "reverse trip" affordance). */
+.endpoints {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    'from swap'
+    'to swap';
+  align-items: center;
+  gap: 8px;
+}
+
 .endpoint {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.endpoint[data-endpoint='from'] {
+  grid-area: from;
+}
+
+.endpoint[data-endpoint='to'] {
+  grid-area: to;
+}
+
+.swap {
+  grid-area: swap;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-dim);
+  transition:
+    color var(--transition-fast),
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.swap:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-faint);
+}
+
+.swap:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.swap:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.swapGlyph {
+  display: grid;
+  place-items: center;
+  /* the half-turn on each press; token-driven so reduced-motion snaps it */
+  transition: transform var(--transition);
 }
 
 .endpointLabel {
@@ -183,6 +243,10 @@
   }
   .rank select {
     min-height: 40px;
+  }
+  .swap {
+    width: 40px;
+    height: 40px;
   }
   .pager button {
     width: 40px;

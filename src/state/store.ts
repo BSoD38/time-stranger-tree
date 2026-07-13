@@ -119,6 +119,7 @@ export interface AppState {
   openRoute(partial?: Partial<Pick<RouteState, 'from' | 'to'>>): void;
   closeRoute(): void;
   setRouteEndpoint(which: 'from' | 'to', slug: string | null): void;
+  swapRoute(): void;
   setMaxAgentRank(value: number | null): void;
   setActiveRoute(index: number): void;
   setActiveStep(index: number | null): void;
@@ -193,6 +194,12 @@ export const useStore = create<AppState>()(
     closeRoute: () => set({ routeOpen: false }),
     setRouteEndpoint: (which, slug) =>
       set({ route: computeRoutes({ ...get().route, [which]: slug }) }),
+    // Reverse the journey: exchange endpoints and re-solve. Reuses the same
+    // compute path as setRouteEndpoint, so the URL (#/route/from/to) follows.
+    swapRoute: () => {
+      const { from, to } = get().route;
+      set({ route: computeRoutes({ ...get().route, from: to, to: from }) });
+    },
     setMaxAgentRank: (value) =>
       set({ route: computeRoutes({ ...get().route, maxAgentRank: value }) }),
     setActiveRoute: (index) =>
