@@ -274,6 +274,33 @@ function frameGraph(cy: Core, animate = true): void {
   }
 }
 
+/**
+ * Re-pack the compact focus view after a branch is hidden or restored, WITHOUT
+ * moving the camera. compactFocus re-sequences the remaining members so the gap
+ * a hidden branch leaves behind closes up — but on its own that shifts every
+ * node, which would slide the lineage out from under a static viewport. So we
+ * pin the focus node: record where it sits on screen, re-pack, then pan by the
+ * exact delta so it lands back on that same pixel. The kept branches close ranks
+ * around it; the viewport itself never pans or zooms.
+ *
+ * Only the compact (hide-others) view has gaps to close — in dim mode the full
+ * graph layout stays put and hidden branches just fade, so there's nothing to
+ * re-pack. Focus (re)framing on enter/exit stays with frameGraph; this only runs
+ * when exclusions change under a stable focus.
+ */
+function repackFocusStable(): void {
+  const cy = getCy();
+  if (!cy) return;
+  const { focus, hideOthers, orientation, lineageExcluded } = useStore.getState();
+  if (!focus || !hideOthers) return;
+  const node = cy.$id(focus);
+  if (!node.length) return;
+  const before = node.renderedPosition();
+  compactFocus(cy, focus, orientation, lineageExcluded);
+  const after = node.renderedPosition();
+  cy.panBy({ x: before.x - after.x, y: before.y - after.y });
+}
+
 export function useGraphController(): void {
   useEffect(() => {
     const unsubscribers = [
@@ -338,6 +365,14 @@ export function useGraphController(): void {
 
       // layout + viewport: recompute positions and framing together. Filter
       // criteria are here too — in the normal view they isolate + re-pack.
+      //
+      // `lineageExcluded` is deliberately NOT here: hiding / restoring a branch
+      // should only toggle its visibility (handled by the appearance subscription
+      // above), never re-fit the camera or re-pack the lineage. Keeping it out
+      // means the branches you're keeping stay exactly where they were — no jump
+      // to chase — and a restored branch slots straight back into place. A genuine
+      // re-layout (orientation, hide/dim mode) still honours the current
+      // exclusions, since frameGraph reads them live.
       useStore.subscribe(
         (s) =>
           [
@@ -346,7 +381,6 @@ export function useGraphController(): void {
             s.orientation,
             s.attributes,
             s.special,
-            s.lineageExcluded,
             s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
           ] as const,
         () => {
@@ -354,6 +388,19 @@ export function useGraphController(): void {
           if (cy) frameGraph(cy);
         },
         { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
+      ),
+
+      // Re-pack (but don't re-frame) when a branch is hidden / restored under a
+      // stable focus, so gaps close without the camera chasing them. A focus
+      // change resets exclusions and is (re)framed by the layout subscription
+      // above, so skip it here to avoid fighting that fit.
+      useStore.subscribe(
+        (s) => ({ focus: s.focus, excluded: s.lineageExcluded }),
+        (cur, prev) => {
+          if (cur.focus !== prev.focus || cur.excluded === prev.excluded) return;
+          repackFocusStable();
+        },
+        { equalityFn: (a, b) => a.focus === b.focus && a.excluded === b.excluded },
       ),
     ];
     recompute(useStore.getState());
