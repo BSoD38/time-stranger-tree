@@ -4,6 +4,7 @@ import { atlasCell } from '../data/atlas';
 import { classifyForwardEdge, type ForwardStepClass } from '../data/route';
 import { edgeKey } from '../data/graph';
 import type { Generation } from '../data/schema';
+import { attrClass } from '../theme/attribute';
 import { nodeAccentHex } from '../theme/chroma';
 import { genLabelPos, orient, type Orientation } from './orient';
 
@@ -19,9 +20,6 @@ const TIER: Partial<Record<Generation, number>> = {
   'Mega': 5,
   'Mega +': 6,
 };
-
-const attrClass = (attribute: string): string =>
-  `attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;
 
 export function buildElements(data: AppData, orientation: Orientation): ElementDefinition[] {
   const { graph, layout } = data;

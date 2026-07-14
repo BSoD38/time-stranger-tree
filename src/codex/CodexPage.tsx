@@ -7,7 +7,7 @@ import { ATTRIBUTE_COLORS } from '../theme/attribute';
 import { FilterChip, FilterChipGroup } from '../ui/FilterChip';
 import { LevelToggle } from '../ui/LevelToggle';
 import { Sprite } from '../ui/Sprite';
-import { buildCodexRows, compareRows, defaultDir, maxTotal, type CodexRow, type SortKey } from './codexRows';
+import { buildCodexRows, compareRows, defaultDir, maxTotal, minTotal, type CodexRow, type SortKey } from './codexRows';
 import {
   advancedCount,
   cycleResist,
@@ -166,8 +166,14 @@ export function CodexPage() {
   useSearchHotkey(searchRef);
 
   const rows = useMemo(() => buildCodexRows(appData().db), []);
-  const maxima = useMemo(
-    () => ({ lv1: maxTotal(rows, 'lv1'), lv99: maxTotal(rows, 'lv99') }),
+  // The Total bar normalizes each level's totals across their own min→max span:
+  // Lv.1 totals (≈1091–9810) and Lv.99 totals (≈6616+) occupy very different
+  // ranges, so a shared fixed floor would blank most bars at one of the levels.
+  const span = useMemo(
+    () => ({
+      lv1: { min: minTotal(rows, 'lv1'), max: maxTotal(rows, 'lv1') },
+      lv99: { min: minTotal(rows, 'lv99'), max: maxTotal(rows, 'lv99') },
+    }),
     [rows],
   );
 
@@ -189,6 +195,13 @@ export function CodexPage() {
     personalities,
   } = useStore((s) => s.codex);
 
+  // One criteria object drives both the table filter and the badge count /
+  // "any advanced?" check, so they can't drift as facets are added.
+  const advanced = useMemo(
+    () => ({ skillElements: skillEls, skillTypes, resist, weak, special, personalities }),
+    [skillEls, skillTypes, resist, weak, special, personalities],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     // A leading '#' or an all-digits query is a dex-number lookup. Parse to an int
@@ -198,7 +211,6 @@ export function CodexPage() {
     const numberQuery = /^\d+$/.test(digits) ? Number(digits) : null;
     const numberMode = numberQuery !== null || q.startsWith('#');
     const dir: 1 | -1 = sortDir === 'asc' ? 1 : -1;
-    const advanced = { skillElements: skillEls, skillTypes, resist, weak, special, personalities };
     return rows
       .filter((r) => {
         if (gens.size && !gens.has(r.generation)) return false;
@@ -209,11 +221,10 @@ export function CodexPage() {
         return r.name.toLowerCase().includes(q);
       })
       .sort((a, b) => compareRows(a, b, sortKey, level, dir));
-  }, [rows, query, gens, attrs, skillEls, skillTypes, resist, weak, special, personalities, sortKey, sortDir, level]);
+  }, [rows, query, gens, attrs, advanced, sortKey, sortDir, level]);
 
-  const adv = { skillElements: skillEls, skillTypes, resist, weak, special, personalities };
-  const advCount = advancedCount(adv);
-  const advActive = hasAdvancedCriteria(adv);
+  const advCount = advancedCount(advanced);
+  const advActive = hasAdvancedCriteria(advanced);
   const filtering = query.trim() !== '' || gens.size > 0 || attrs.size > 0 || advActive;
   const clearAll = () =>
     patchCodex({
@@ -521,7 +532,7 @@ export function CodexPage() {
                 row={r}
                 level={level}
                 sortKey={sortKey}
-                fill={(r.total[level]-6000) / (maxima[level]-6000)}
+                fill={(r.total[level] - span[level].min) / (span[level].max - span[level].min || 1)}
                 onOpen={openInTree}
               />
             ))}

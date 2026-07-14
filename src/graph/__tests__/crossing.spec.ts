@@ -1,18 +1,18 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { buildGraph, lineage } from '../../data/graph';
+import { lineage } from '../../data/graph';
+import { loadRealGraph } from '../../data/__tests__/fixture';
 import { countCrossings, focusPos, minimizeBandCrossings } from '../crossing';
 import type { Pt } from '../orient';
 
-// Real app data.
-const db = JSON.parse(
-  readFileSync(fileURLToPath(new URL('../../../public/digimon.json', import.meta.url)), 'utf8'),
-);
+// Real app data. Load the committed source (data/digimon.json) via the shared
+// fixture — public/digimon.json is gitignored and only exists after data:sync,
+// so reading it directly failed on a clean checkout / CI.
+const graph = loadRealGraph();
 const layout = JSON.parse(
   readFileSync(fileURLToPath(new URL('../../generated/layout.json', import.meta.url)), 'utf8'),
 );
-const graph = buildGraph(db);
 
 /** Reproduce compactFocus's banding: lineage members grouped + seeded by base order. */
 function focusBands(focus: string) {

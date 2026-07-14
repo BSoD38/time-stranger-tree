@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { appData } from '../data/appData';
+import { lineage } from '../data/graph';
 import type { Orientation } from '../graph/orient';
 import { findRoutes, type Route } from '../data/route';
 import {
@@ -67,7 +68,7 @@ function savePrefs(prefs: Prefs): void {
 }
 
 /** Pull the persistable slice out of the live store state (single source for saves). */
-function snapshotPrefs(s: Pick<Prefs, keyof Prefs>): Prefs {
+function snapshotPrefs(s: Prefs): Prefs {
   return { orientation: s.orientation, hideOthers: s.hideOthers, agentSkills: s.agentSkills };
 }
 
@@ -273,10 +274,15 @@ export const useStore = create<AppState>()(
       if (!focus || slug === focus || lineageExcluded.has(slug)) return;
       const next = new Set(lineageExcluded);
       next.add(slug);
-      // If the branch we're hiding was the current selection, it's about to
-      // vanish — drop back to the lineage overview rather than describing a
-      // now-hidden node in the panel.
-      set({ lineageExcluded: next, selected: selected === slug ? null : selected });
+      // Hiding a branch prunes it AND anything only reachable through it. If that
+      // strands the current selection outside the recomputed lineage — whether
+      // it's the hidden branch itself or a node that only connected via it — drop
+      // back to the lineage overview rather than describing a now-hidden node.
+      const selectionStrands =
+        selected !== null &&
+        selected !== focus &&
+        !lineage(appData().graph, focus, next).nodes.has(selected);
+      set({ lineageExcluded: next, selected: selectionStrands ? null : selected });
     },
     restoreToLineage: (slug) => {
       const next = new Set(get().lineageExcluded);

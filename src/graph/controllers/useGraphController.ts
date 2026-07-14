@@ -76,6 +76,28 @@ function manageRouteFlow(): void {
 }
 
 /**
+ * Move the `route-step-active` highlight to the currently hovered step's edge.
+ * Split out of the full appearance recompute so brushing across route steps
+ * only re-stamps one class instead of re-deriving the focus lineage, filter and
+ * route layers over ~475 nodes / ~1120 edges on every mouseenter/leave.
+ */
+function updateActiveStep(state: AppState): void {
+  const cy = getCy();
+  if (!cy) return;
+  cy.batch(() => {
+    cy.edges('.route-step-active').removeClass('route-step-active');
+    const route = state.routeOpen ? state.route.routes?.[state.route.active] : undefined;
+    const idx = state.route.activeStep;
+    if (!route || idx === null) return;
+    const step = route.steps[idx];
+    if (!step) return;
+    // a dedigivolve step from u to v travels the forward edge v->u
+    const id = step.kind === 'digivolve' ? edgeKey(step.from, step.to) : edgeKey(step.to, step.from);
+    cy.$id(id).addClass('route-step-active');
+  });
+}
+
+/**
  * Highlight the lineage of `anchor`: nodes/edges outside it get `outsideClass`
  * (hidden / dim-hard / dim-soft), while edges inside are coloured by direction —
  * `lineage-next` for edges leading away from the anchor toward its descendants
@@ -312,7 +334,10 @@ function repackFocusStable(): void {
 export function useGraphController(): void {
   useEffect(() => {
     const unsubscribers = [
-      // appearance: any of these slices changes → one full recompute
+      // appearance: any of these slices changes → one full recompute. The active
+      // *route* is tracked (not the whole `s.route`) so that hovering a step —
+      // which only swaps `route.activeStep` — doesn't drag the full recompute;
+      // the dedicated active-step subscription below handles that cheaply.
       useStore.subscribe(
         (s) =>
           [
@@ -322,7 +347,7 @@ export function useGraphController(): void {
             s.attributes,
             s.special,
             s.personalities,
-            s.route,
+            s.routeOpen ? (s.route.routes?.[s.route.active] ?? null) : null,
             s.routeOpen,
             s.lineageExcluded,
           ] as const,
@@ -331,6 +356,16 @@ export function useGraphController(): void {
           manageRouteFlow(); // (re)bind the flow to the current active-step edge
         },
         { equalityFn: (a, b) => a.every((v, i) => v === b[i]) },
+      ),
+
+      // active route step (hover): re-stamp just the `route-step-active` edge and
+      // rebind the marching-ants flow — no full appearance recompute.
+      useStore.subscribe(
+        (s) => s.route.activeStep,
+        () => {
+          updateActiveStep(useStore.getState());
+          manageRouteFlow();
+        },
       ),
 
       // lock-on pulse when a new Digimon is selected (runs after the appearance

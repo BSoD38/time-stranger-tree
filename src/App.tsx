@@ -15,7 +15,7 @@ import { SettingsMenu } from './settings/SettingsMenu';
 import { CodexPage } from './codex/CodexPage';
 import { useStore } from './state/store';
 import { exitFocus, exitRoute, initUrlSync } from './state/urlSync';
-import { ATTRIBUTE_COLORS, injectThemeVars } from './theme/attribute';
+import { ATTRIBUTE_COLORS } from './theme/attribute';
 import { ATTRIBUTE_KEYS } from './data/schema';
 import { useChromaticAccent } from './theme/useChromaticAccent';
 import { BrandMark } from './ui/BrandMark';
@@ -190,7 +190,6 @@ export default function App() {
   useChromaticAccent();
 
   useEffect(() => {
-    injectThemeVars();
     const controller = new AbortController();
     setError(null);
     loadDatabase(controller.signal)

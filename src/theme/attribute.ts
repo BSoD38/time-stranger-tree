@@ -93,12 +93,8 @@ export const GRAPH_PALETTES: Record<Theme, GraphPalette> = {
   },
 };
 
-export const attrVar = (attribute: Attribute): string =>
-  `--attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;
-
-export function injectThemeVars(): void {
-  const root = document.documentElement;
-  for (const [attribute, color] of Object.entries(ATTRIBUTE_COLORS)) {
-    root.style.setProperty(attrVar(attribute as Attribute), color);
-  }
-}
+/** attribute → cytoscape node class (e.g. "No Data" → "attr-no-data"). Shared by
+ *  the stylesheet (which builds the `node.attr-*` selectors) and elements (which
+ *  stamps the classes onto nodes), so the two can never drift out of sync. */
+export const attrClass = (attribute: string): string =>
+  `attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;

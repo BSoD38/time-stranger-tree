@@ -257,7 +257,7 @@ export function RoutePlanner() {
                       reduced={reducedSummary ? (reducedSummary.maxStats[stat as StatKey] ?? value) : value}
                     />
                   ))}
-                  {summary.maxTalent && <Chip>Talent ≥ {summary.maxTalent}</Chip>}
+                  {summary.maxTalent != null && <Chip>Talent ≥ {summary.maxTalent}</Chip>}
                   {summary.items.map((item) => (
                     <Chip key={item} color="var(--item)">
                       ◆ {item}

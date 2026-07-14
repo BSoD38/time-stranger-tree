@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { AGENT_SKILL_GLYPH } from '../data/agentSkills';
 import { useStore } from '../state/store';
 import { PersonalityGroups, personalitySummary } from '../ui/PersonalityGroups';
+import { useAnchoredPopover } from '../ui/useAnchoredPopover';
 import { toggleBond } from './personalityFacet';
 import styles from './PersonalityFilter.module.css';
 
@@ -49,44 +50,9 @@ export function PersonalityFilter() {
     pop.style.maxHeight = `${Math.max(180, window.innerHeight - top - 8)}px`;
   }, []);
 
-  useEffect(() => {
-    const pop = popRef.current;
-    if (!pop) return;
-    if (open) {
-      if (!pop.matches(':popover-open')) pop.showPopover();
-      place();
-    } else if (pop.matches(':popover-open')) {
-      pop.hidePopover();
-    }
-  }, [open, place]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (
-        !wrapRef.current?.contains(e.target as Node) &&
-        !popRef.current?.contains(e.target as Node)
-      ) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        setOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-    const onResize = () => place();
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [open, place]);
+  // Return focus to the trigger when Escape closes the popover.
+  const focusTrigger = useCallback(() => triggerRef.current?.focus(), []);
+  useAnchoredPopover({ open, setOpen, wrapRef, popRef, place, onEscape: focusTrigger });
 
   return (
     <div className={styles.wrap} ref={wrapRef}>

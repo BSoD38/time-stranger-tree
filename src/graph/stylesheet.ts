@@ -1,4 +1,4 @@
-import { ATTRIBUTE_COLORS, type GraphPalette } from '../theme/attribute';
+import { attrClass, ATTRIBUTE_COLORS, type GraphPalette } from '../theme/attribute';
 import { ATTRIBUTE_KEYS } from '../data/schema';
 import { ATLAS_BG_HEIGHT, ATLAS_BG_WIDTH, ATLAS_SRC } from '../data/atlas';
 
@@ -9,9 +9,6 @@ interface StyleRule {
   selector: string;
   style: Record<string, unknown>;
 }
-
-const attrClass = (attribute: string): string =>
-  `attr-${attribute.toLowerCase().replace(/\s+/g, '-')}`;
 
 /**
  * Class-driven stylesheet — classes are stamped once at load; class selectors

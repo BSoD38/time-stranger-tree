@@ -91,10 +91,13 @@ export function initUrlSync(): void {
       const url = target || location.pathname + location.search;
       // Focus, Route and Codex are full mode changes worth a history entry, so
       // browser Back leaves them; selection just replaces (no history spam).
+      // Leaving the Codex for the Tree (openInTree) is the mirror case: push so
+      // Back returns to the Field Guide instead of collapsing the #/codex entry.
       const entering =
         (focus && !location.hash.startsWith('#/f/')) ||
         (routeOpen && routeFrom && routeTo && !location.hash.startsWith('#/route/')) ||
-        (view === 'codex' && location.hash !== '#/codex');
+        (view === 'codex' && location.hash !== '#/codex') ||
+        (view !== 'codex' && location.hash === '#/codex');
       if (entering) history.pushState(null, '', url);
       else history.replaceState(null, '', url);
     },

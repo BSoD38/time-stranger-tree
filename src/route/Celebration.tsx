@@ -18,7 +18,6 @@ export function Celebration() {
   const from = useStore((s) => s.route.from);
   const to = useStore((s) => s.route.to);
   const routes = useStore((s) => s.route.routes);
-  const active = useStore((s) => s.route.active);
   const [burst, setBurst] = useState<Burst | null>(null);
   const lastKey = useRef('');
 
@@ -27,10 +26,15 @@ export function Celebration() {
       lastKey.current = '';
       return;
     }
-    const route = routes[active];
-    if (!route || !route.steps.length) return;
     const key = `${from}|${to}|${routes.length}`;
     if (key === lastKey.current) return;
+    // Read the active route imperatively rather than subscribing to it: paging
+    // between alternatives changes `route.active` but must NOT re-run this effect
+    // — React's cleanup would cancel the pending auto-dismiss, and the unchanged
+    // key would then skip rescheduling it, stranding the toast on screen. On a
+    // fresh plot the active index is always 0.
+    const route = routes[useStore.getState().route.active];
+    if (!route || !route.steps.length) return;
     lastKey.current = key;
 
     setBurst({
@@ -40,7 +44,7 @@ export function Celebration() {
     });
     const id = window.setTimeout(() => setBurst(null), 2400);
     return () => window.clearTimeout(id);
-  }, [routeOpen, from, to, routes, active]);
+  }, [routeOpen, from, to, routes]);
 
   if (!burst) return null;
 

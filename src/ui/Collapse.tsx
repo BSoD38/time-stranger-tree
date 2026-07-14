@@ -12,14 +12,25 @@ const storageKey = (id: string) => `tst.collapse.${id}`;
 
 export function Collapse({ id, title, defaultOpen = false, children }: CollapseProps) {
   const [open, setOpen] = useState<boolean>(() => {
-    const stored = localStorage.getItem(storageKey(id));
-    return stored === null ? defaultOpen : stored === '1';
+    // Runs during render — guard storage access so a blocked-storage context
+    // (private mode / sandboxed iframe) doesn't throw out of render and crash
+    // the detail panel every time a Digimon is opened.
+    try {
+      const stored = localStorage.getItem(storageKey(id));
+      return stored === null ? defaultOpen : stored === '1';
+    } catch {
+      return defaultOpen;
+    }
   });
 
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    localStorage.setItem(storageKey(id), next ? '1' : '0');
+    try {
+      localStorage.setItem(storageKey(id), next ? '1' : '0');
+    } catch {
+      /* storage blocked — the section's open state just won't persist */
+    }
   };
 
   return (

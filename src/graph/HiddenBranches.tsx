@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { appData } from '../data/appData';
 import { useStore } from '../state/store';
 import { Sprite } from '../ui/Sprite';
+import { useAnchoredPopover } from '../ui/useAnchoredPopover';
 import styles from './HiddenBranches.module.css';
 
 /**
@@ -43,43 +44,7 @@ export function HiddenBranches() {
     pop.style.top = `${r.bottom + 8}px`;
   }, []);
 
-  useEffect(() => {
-    const pop = popRef.current;
-    if (!pop) return;
-    if (open) {
-      if (!pop.matches(':popover-open')) pop.showPopover();
-      place();
-    } else if (pop.matches(':popover-open')) {
-      pop.hidePopover();
-    }
-  }, [open, place]);
-
-  // A `manual` popover doesn't light-dismiss, so we keep our own outside-pointer
-  // + Escape handling — capturing Escape so it closes without also unwinding
-  // focus via the global key handler. Reposition on resize.
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        setOpen(false);
-      }
-    };
-    const onResize = () => place();
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [open, place]);
+  useAnchoredPopover({ open, setOpen, wrapRef, popRef, place });
 
   const count = excluded.size;
   if (!focus || count === 0) return null;

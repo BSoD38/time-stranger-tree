@@ -77,9 +77,16 @@ export function buildCodexRows(db: DigimonDatabase): CodexRow[] {
     .sort((a, b) => a.number - b.number);
 }
 
-/** The largest stat total across all rows at a level — normalizes the total bar. */
+/** The largest stat total across all rows at a level — the total bar's ceiling. */
 export function maxTotal(rows: CodexRow[], level: StatLevel): number {
   return rows.reduce((max, r) => Math.max(max, r.total[level]), 1);
+}
+
+/** The smallest stat total across all rows at a level — the total bar's floor.
+ *  The bar normalizes min→max so it spreads at each level; a fixed floor only
+ *  suits one level (Lv.1 and Lv.99 totals live in very different ranges). */
+export function minTotal(rows: CodexRow[], level: StatLevel): number {
+  return rows.reduce((min, r) => Math.min(min, r.total[level]), Infinity);
 }
 
 const GEN_ORDER = new Map(GENERATION_KEYS.map((g, i) => [g, i]));

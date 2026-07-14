@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { useStore } from '../state/store';
 import type { Orientation } from '../graph/orient';
 import {
@@ -6,6 +6,7 @@ import {
   MAX_STACKS,
   reductionPct,
 } from '../data/agentSkills';
+import { useAnchoredPopover } from '../ui/useAnchoredPopover';
 import styles from './SettingsMenu.module.css';
 
 interface Choice<T> {
@@ -145,46 +146,10 @@ export function SettingsMenu() {
     pop.style.top = `${r.bottom + 8}px`;
   }, []);
 
-  // Drive the native popover from the store, so it can also be opened from
-  // elsewhere (the detail panel's "Open settings" tip) and always paints in the
-  // top layer — above the detail panel / mobile bottom sheet.
-  useEffect(() => {
-    const pop = popRef.current;
-    if (!pop) return;
-    if (open) {
-      if (!pop.matches(':popover-open')) pop.showPopover();
-      place();
-    } else if (pop.matches(':popover-open')) {
-      pop.hidePopover();
-    }
-  }, [open, place]);
-
-  // A `manual` popover doesn't light-dismiss, so we keep our own outside-pointer
-  // + Escape handling — capturing Escape so it closes the menu without also
-  // unwinding focus/route via the global key handler. Reposition on resize.
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node) && !popRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        setOpen(false);
-      }
-    };
-    const onResize = () => place();
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown, true);
-    window.addEventListener('resize', onResize);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown, true);
-      window.removeEventListener('resize', onResize);
-    };
-  }, [open, setOpen, place]);
+  // Drive the popover + its dismiss wiring (shared with the other top-layer
+  // popovers). The menu can also be opened from elsewhere (the detail panel's
+  // "Open settings" tip), and always paints above the panel / mobile sheet.
+  useAnchoredPopover({ open, setOpen, wrapRef, popRef, place });
 
   return (
     <div className={styles.wrap} ref={wrapRef}>

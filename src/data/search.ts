@@ -81,8 +81,20 @@ export function digimonTraits(d: Digimon): Set<SpecialFacet> {
   return traits;
 }
 
+// Single-flight memo: a filter toggle fires both graph subscriptions (appearance
+// + layout) plus a FilterBar re-render, each calling filterSlugs with the SAME
+// criteria — so cache the last (db, facets) → set. The facet Sets keep a stable
+// reference between toggles (the store swaps them only on change), so identity
+// comparison is enough. Callers only read the result, never mutate it.
+let memoKey: readonly unknown[] | null = null;
+let memoResult: Set<string> | null = null;
+
 /** OR within a facet, AND across facets. Empty facet = no constraint. */
 export function filterSlugs(db: DigimonDatabase, f: FilterCriteria): Set<string> {
+  const key = [db, f.generations, f.attributes, f.special, f.personalities] as const;
+  if (memoResult && memoKey && key.every((v, i) => v === memoKey![i])) {
+    return memoResult;
+  }
   const result = new Set<string>();
   for (const d of Object.values(db.digimon)) {
     if (f.generations?.size && !f.generations.has(d.generation)) continue;
@@ -101,5 +113,7 @@ export function filterSlugs(db: DigimonDatabase, f: FilterCriteria): Set<string>
     }
     result.add(d.slug);
   }
+  memoKey = key;
+  memoResult = result;
   return result;
 }

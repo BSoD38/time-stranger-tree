@@ -15,7 +15,16 @@ function systemPref(): Theme {
 
 /** Run before first paint (also mirrored by an inline script in index.html). */
 export function initTheme(): Theme {
-  const stored = localStorage.getItem(KEY) as Theme | null;
+  // Runs synchronously at module load, before React mounts. Storage access can
+  // throw (Safari "Block all cookies", a storage-blocked iframe, Firefox with
+  // dom.storage disabled) — swallow it so the app still paints (falling back to
+  // the system preference) rather than aborting startup with a blank page.
+  let stored: Theme | null = null;
+  try {
+    stored = localStorage.getItem(KEY) as Theme | null;
+  } catch {
+    /* storage blocked — fall back to the system preference */
+  }
   current = stored === 'light' || stored === 'dark' ? stored : systemPref();
   document.documentElement.setAttribute('data-theme', current);
   return current;
@@ -38,7 +47,11 @@ export function setTheme(theme: Theme): void {
     themingTimer = window.setTimeout(() => root.removeAttribute('data-theming'), 340);
   }
   root.setAttribute('data-theme', theme);
-  localStorage.setItem(KEY, theme);
+  try {
+    localStorage.setItem(KEY, theme);
+  } catch {
+    /* storage blocked — the choice just won't persist across sessions */
+  }
   listeners.forEach((l) => l(theme));
 }
 
